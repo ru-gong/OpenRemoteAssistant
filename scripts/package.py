@@ -448,8 +448,10 @@ def main() -> None:
     validate_hardened_runtime(app / "Contents/Helpers/OpenRemoteUninstallHelper")
     validate_hardened_runtime(app / "Contents/Helpers/卸载遥控器助手.app")
     signing = ["--sign", pkg_sign] if pkg_sign else []
-    suffix = "-开发测试" if args.development else "-签名候选"
-    final_package = artifacts / f"遥控器助手-{VERSION}{suffix}.pkg"
+    suffix = "-development" if args.development else "-signed-candidate"
+    # GitHub strips non-ASCII characters from release asset filenames. Keep
+    # the public artifact name portable so SHA256SUMS remains directly usable.
+    final_package = artifacts / f"OpenRemoteAssistant-{VERSION}{suffix}.pkg"
     final_archive = artifacts / f"OpenRemoteAssistant-{VERSION}-source.tar.gz"
     final_version_manifest = artifacts / f"manifest-{VERSION}.json"
     final_manifest = artifacts / "manifest.json"

@@ -14,7 +14,7 @@
 
 ### 安装
 
-1. 从 [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases) 下载 `遥控器助手-0.2.9-开发测试.pkg` 和 `SHA256SUMS.txt`，先核对文件摘要。
+1. 从 [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases) 下载 `OpenRemoteAssistant-0.2.9-development.pkg` 和 `SHA256SUMS.txt`，先核对文件摘要。
 2. 升级前在旧版遥控器助手中按 **⌘Q 完全退出**。只关闭窗口时，程序仍可能驻留菜单栏。
 3. 打开 PKG，并按 macOS 提示完成管理员授权。安装器写入：
    - `/Applications/遥控器助手.app`
@@ -121,7 +121,7 @@ OpenRemoteAssistant connects one supported **Xiaomi RC003-MS Bluetooth voice rem
 
 ### Installation
 
-1. Download `遥控器助手-0.2.9-开发测试.pkg` and `SHA256SUMS.txt` from [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases), then verify the digest.
+1. Download `OpenRemoteAssistant-0.2.9-development.pkg` and `SHA256SUMS.txt` from [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases), then verify the digest.
 2. Before upgrading, press **Command-Q** in the old assistant. Closing its window may leave the menu-bar process running.
 3. Open the PKG and approve the macOS administrator prompt. It installs:
    - `/Applications/遥控器助手.app`
