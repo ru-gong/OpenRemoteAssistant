@@ -29,5 +29,6 @@ The corresponding source for this local build is the complete `product/driver`
 source directory (excluding generated `build/`) together with
 `product/scripts/build-driver.zsh`. No private key is required for the default
 ad-hoc local build. A public binary release must provide its exact corresponding
-source beside the binary download under GPLv3 section 6(d); this local notice
-does not claim that a public release or source hosting has already occurred.
+source beside the binary download under GPLv3 section 6(d). Public releases are
+hosted at https://github.com/ru-gong/OpenRemoteAssistant/releases and must keep
+the matching source archive and checksum file beside each binary.

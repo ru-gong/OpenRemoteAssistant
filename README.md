@@ -115,4 +115,4 @@ python3 scripts/package.py --development
 
 应用采用 GPL-3.0-only，保留 Open Voice Bridge、remote-bridge-hub 以及 HD838A/remote-mic-app 固定提交的改编来源。Typeless 兼容中的事务式 F5 中和、软件 Fn 注入和成对点按会话控制直接适配自 remote-mic-app，版权归 2026 SayAll contributors；不复制其品牌、图标或商品照片。专用驱动从固定 BlackHole GPLv3 源码构建，采用独立名称/标识；不分发其官方安装包、图标或品牌素材。详见 [COPYRIGHT](COPYRIGHT)、[第三方说明](THIRD_PARTY_NOTICES.md) 和 [驱动说明](driver/NOTICE.md)。
 
-公众发行必须同时提供与每个安装包对应的完整源码（含本项目驱动修改、构建及安装脚本），并完成素材与产物审查。当前源码目录和构建产物只在本机，未上传或发布。
+公众发行必须同时提供与每个安装包对应的完整源码（含本项目驱动修改、构建及安装脚本），并完成素材与产物审查。公开源码与版本附件位于 [ru-gong/OpenRemoteAssistant](https://github.com/ru-gong/OpenRemoteAssistant)；每个二进制 Release 都应保留同版本源码归档与 SHA-256 校验文件。
