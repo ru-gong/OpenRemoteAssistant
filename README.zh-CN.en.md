@@ -1,8 +1,8 @@
-# 遥控器助手 / OpenRemoteAssistant
+# 小米蓝牙遥控器 2 Pro 助手 / OpenRemoteAssistant
 
 ## 中文
 
-遥控器助手把指定的 **小米 RC003-MS 蓝牙语音遥控器**接入 Mac：普通按键可以映射成键盘按键或组合键，遥控器自带麦克风可以作为其他软件可选择的系统输入。程序不做语音转文字，不保存或上传录音。
+遥控器助手把 **小米蓝牙遥控器 2 Pro** 接入 Mac，适用于语音输入、语音编程和 **web coding** 等场景。当前实机支持并验证的型号为 **RC003-MS**（设备自报 RC003）：普通按键可以映射成键盘按键或组合键，遥控器自带麦克风可以作为其他软件可选择的系统输入。程序不做语音转文字，不保存或上传录音。
 
 ### 当前版本
 
@@ -109,7 +109,7 @@ python3 scripts/package.py --development
 
 ## English
 
-OpenRemoteAssistant connects one supported **Xiaomi RC003-MS Bluetooth voice remote** to a Mac. It maps remote buttons to keys or shortcuts and exposes the remote's built-in microphone as a system input selectable by other applications. It does not transcribe speech, store recordings, or upload audio.
+OpenRemoteAssistant connects a **Xiaomi Bluetooth Remote 2 Pro** to a Mac for voice input, voice coding, and **web coding** workflows. The currently supported and physically validated model is **RC003-MS** (reported by the device as RC003). It maps remote buttons to keys or shortcuts and exposes the remote's built-in microphone as a system input selectable by other applications. It does not transcribe speech, store recordings, or upload audio.
 
 ### Current release
 
