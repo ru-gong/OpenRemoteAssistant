@@ -1,0 +1,11 @@
+.DS_Store
+._*
+artifacts/
+apps/macos/build/
+driver/build/
+**/*.xcuserstate
+**/xcuserdata/
+*.p12
+*.p8
+.env*
+__pycache__/

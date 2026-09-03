@@ -1,0 +1,42 @@
+OpenRemoteAssistant / 遥控器助手
+Copyright (C) 2026 OpenRemoteAssistant contributors
+
+Application sources are distributed under GPL-3.0-only. See LICENSE.
+
+ATVV protocol and IMA ADPCM implementation adapted from:
+Open Voice Bridge
+Copyright (C) 2026 Open Voice Bridge contributors
+https://github.com/nijez/open-voice-bridge
+Reference revision: 1796b149f752ff2d2fa82fd818f8a5a2bc60802a
+
+That implementation was informed by the GPL-3.0-only project:
+https://github.com/xxb26553663-star/remote-bridge-hub
+Reference revision: 8a93f321ac71a602300c6cd77f7256fa4b63068e
+
+The separately built OpenRemoteAudio driver is a modified, unofficial build
+of BlackHole source code. Original source copyright and license notices are
+preserved in driver/. No upstream endorsement is implied.
+
+The visible-input USB transport compatibility design was independently adapted
+after reviewing https://github.com/HD838A/remote-mic-app at revision
+9e019112fc88534004641499b0b1efc50b491e5e (GPL-3.0-only). No branding asset,
+binary or product identifier from that project is included.
+
+The Typeless compatibility implementation directly adapts transactional F5
+neutralization, software Fn-key injection, paired Fn-tap session control and
+related test logic from the same fixed revision of remote-mic-app:
+Copyright (C) 2026 SayAll contributors
+License: GPL-3.0-only
+
+OpenRemoteAssistant limits that mapping to the bound RC003-MS location,
+revalidates all matching services before each stream, and integrates the
+session controller with its separate OpenRemoteAudio route. No remote-mic-app
+or SayAll name, bundle identifier, binary, logo, app icon, brand asset or
+bundled product photo is included.
+
+Modification date: 2026-09-03
+Changes: RC003-MS device profile and local binding; dedicated virtual microphone
+route; independent audio/key controls; Typeless compatibility integration;
+software-Fn hold/toggle presets; native mapping UI and configuration; macOS
+integration, tests and installer.
+See THIRD_PARTY_NOTICES.md.

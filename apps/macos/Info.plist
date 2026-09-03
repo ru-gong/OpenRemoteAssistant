@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>org.rc001remote.assistant</string>
+	<key>CFBundleName</key>
+	<string>遥控器助手</string>
+	<key>CFBundleDisplayName</key>
+	<string>遥控器助手</string>
+	<key>CFBundleExecutable</key>
+	<string>OpenRemoteAssistant</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.2.9</string>
+	<key>CFBundleVersion</key>
+	<string>16</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>核验并连接你选择的 RC003-MS 遥控器。仅在你启用麦克风功能并按住语音键时接收遥控器的声音，转送至专用系统输入；不采集电脑麦克风、不保存录音、不转写或上传。</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>OpenRemoteAssistant contributors. GPL-3.0-only; third-party notices included.</string>
+</dict>
+</plist>

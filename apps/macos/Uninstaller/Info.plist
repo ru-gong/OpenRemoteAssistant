@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>org.rc001remote.assistant.uninstaller</string>
+    <key>CFBundleName</key>
+    <string>卸载遥控器助手</string>
+    <key>CFBundleDisplayName</key>
+    <string>卸载遥控器助手</string>
+    <key>CFBundleExecutable</key>
+    <string>OpenRemoteUninstaller</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.2.9</string>
+    <key>CFBundleVersion</key>
+    <string>16</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>26.0</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSHumanReadableCopyright</key>
+    <string>OpenRemoteAssistant contributors. GPL-3.0-only.</string>
+</dict>
+</plist>

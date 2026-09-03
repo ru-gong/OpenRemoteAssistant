@@ -1,0 +1,14 @@
+{
+  "project": "https://github.com/ExistentialAudio/BlackHole",
+  "revision": "e2b22aaaba4e507a097131704bf96dabc004d9cf",
+  "files": {
+    "BlackHole.c": {
+      "upstream_path": "BlackHole/BlackHole.c",
+      "sha256": "5194703e8923713d15159b951b8fe9a8be08e7c0fb7c05b17c8e865e4c2effb6"
+    },
+    "LICENSE": {
+      "upstream_path": "LICENSE",
+      "sha256": "d5134ba41d942612bdf5ab79b32b3ddc2458f55e16437390bd81be8f2e0811e0"
+    }
+  }
+}
