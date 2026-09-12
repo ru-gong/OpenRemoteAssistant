@@ -151,10 +151,10 @@ def main() -> None:
         welcome = (distribution.parent / "welcome.html").read_text()
         expect("⌘Q" in welcome and "只关闭窗口" in welcome,
                "installer welcome explains that closing the window does not quit the app")
-        expect("0.2.9" in welcome and "多种语音软件 Fn 预设" in welcome,
+        expect(packaging.VERSION in welcome and "自选快捷键及点按/长按模式" in welcome,
                "installer welcome identifies the current preset-capable release")
-    expect(packaging.VERSION == "0.2.9" and packaging.BUILD == "16",
-           "package release identity is 0.2.9 build 16")
+    expect(packaging.VERSION == "0.2.10" and packaging.BUILD == "17",
+           "package release identity is 0.2.10 build 17")
     expect(packaging.DRIVER_VERSION == "0.1.1" and packaging.DRIVER_BUILD == "2",
            "changed audio driver identity is 0.1.1 build 2")
     expect(packaging.TYPELESS_REFERENCE_REVISION ==

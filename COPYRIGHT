@@ -34,9 +34,9 @@ session controller with its separate OpenRemoteAudio route. No remote-mic-app
 or SayAll name, bundle identifier, binary, logo, app icon, brand asset or
 bundled product photo is included.
 
-Modification date: 2026-09-03
+Modification date: 2026-09-12
 Changes: RC003-MS device profile and local binding; dedicated virtual microphone
 route; independent audio/key controls; Typeless compatibility integration;
-software-Fn hold/toggle presets; native mapping UI and configuration; macOS
+configurable-key hold/toggle presets (Fn by default); native mapping UI and configuration; macOS
 integration, tests and installer.
 See THIRD_PARTY_NOTICES.md.

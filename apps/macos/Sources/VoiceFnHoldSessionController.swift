@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 OpenRemoteAssistant contributors
-// Added 2026-09-03.
+// Added 2026-09-03; modified 2026-09-12.
 
 import Foundation
 
-/// Balanced software-Fn hold for push-to-talk applications. Fn is pressed
+/// Balanced key hold for push-to-talk applications. The injected key is pressed
 /// before the remote opens its microphone and released only after queued tail
 /// audio drains. No PCM is retained here.
 final class VoiceFnHoldSessionController {
@@ -103,6 +103,10 @@ final class VoiceFnHoldSessionController {
             runIdleCompletions()
         case .held where drain:
             _ = stopVoice()
+        case .draining where drain:
+            // A settings change during normal tail drain must wait for the
+            // old key's release before another key/mode can become active.
+            break
         case .held, .draining:
             generation &+= 1
             _ = releaseFunctionKey(reportFailure: reportFailure)

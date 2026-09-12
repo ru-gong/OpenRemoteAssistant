@@ -404,7 +404,7 @@ def distribution(path: Path, component: str, development: bool) -> None:
     (path.parent / "welcome.html").write_text(
         f'<!doctype html><meta charset="utf-8"><h2>遥控器助手 {VERSION}（build {BUILD}）</h2><p>{warning}</p>'
         '<p><strong>升级前必须在旧版“遥控器助手”中按 ⌘Q 完全退出；只关闭窗口后程序仍可能驻留。系统安装器也会在继续前检查并提示退出。</strong></p>'
-        '<p>安装应用、兼容清理用按键组件和专用麦克风；0.2.9 的按键映射只使用主程序权限，不启动该旧按键组件，并加入多种语音软件 Fn 预设。安装、重载与连接本身不会自动更改默认音频设备。应用内置“卸载遥控器助手”窗口，可选清除当前用户数据。</p>'
+        '<p>安装应用、兼容清理用按键组件和专用麦克风；当前版本的按键映射只使用主程序权限，不启动该旧按键组件，语音软件支持自选快捷键及点按/长按模式。安装、重载与连接本身不会自动更改默认音频设备。应用内置“卸载遥控器助手”窗口，可选清除当前用户数据。</p>'
         '<p>固定安装位置：<code>/Applications/遥控器助手.app</code>、<code>/Library/PrivilegedHelperTools/OpenRemoteHIDCoreService.app</code>、<code>/Library/Audio/Plug-Ins/HAL/OpenRemoteAudio.driver</code>。</p>'
         '<p>安装需要管理员授权，不要求重启电脑，也不会自动重启音频服务。完成后退出安装器，打开“应用程序”中的遥控器助手，程序会检查音频组件是否生效。</p>'
         '<p>若显示“已安装，尚未生效”，可点击“重新加载音频服务…”。这会暂时中断整台电脑的声音、录音及会议，请先结束音频工作；只有再次确认并通过管理员授权后才执行，也可选择稍后处理。</p>'
@@ -508,8 +508,8 @@ def main() -> None:
             "atvv_topology_verified": True,
             "atvv_capabilities_verified": True,
             "atvv_capabilities": ATVV_CAPABILITIES,
-            "notarized": False, "installed": False, "physical_microphone_verified": True,
-            "physical_hid_verified": False, "system_end_to_end_verified": True,
+            "notarized": False, "installed": False, "physical_microphone_verified": False,
+            "physical_hid_verified": False, "system_end_to_end_verified": False,
             "installation_requires_restart": False, "audio_service_reload_verified": False,
             "privileged_hid_session_verified": False, "mapping_session_requires_administrator": False,
             "mapping_mode": "bound-device seize with shared-read event-suppression fallback",
@@ -522,11 +522,15 @@ def main() -> None:
             "typeless_reference_revision": TYPELESS_REFERENCE_REVISION,
             "software_fn_event": {"virtual_key": 63, "flag": "maskSecondaryFn", "source": "hidSystemState"},
             "voice_shortcut_presets": VOICE_SHORTCUT_PRESETS,
+            "voice_shortcut_key_configurable": True, "voice_shortcut_default_key": "fn",
+            "voice_shortcut_mode_configurable": True,
+            "custom_voice_shortcut_physical_verified": False,
             "typeless_basic_user_confirmed": True,
-            "typeless_physical_end_to_end_verified": True,
+            "typeless_physical_end_to_end_verified": False,
+            "previous_basic_microphone_to_typeless_user_confirmed": True,
             "full_physical_acceptance_verified": False,
             "clean_install_verified": False,
-            "verification_scope": "user-confirmed basic RC003-MS microphone to Typeless path; preset matrix and stress checklist pending",
+            "verification_scope": "previous candidate basic RC003-MS microphone to Typeless path was user-confirmed; this candidate has offline validation only; custom key/mode combinations, preset matrix and stress checklist pending",
             "source_files": frozen_sources,
             "artifacts": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in [staged_package, staged_archive]}}
         manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 SayAll contributors
 // Modifications Copyright (C) 2026 OpenRemoteAssistant contributors
-// Modified 2026-09-02.
+// Modified 2026-09-12.
 // Adapted from HD838A/remote-mic-app tests at commit
 // 9e019112fc88534004641499b0b1efc50b491e5e.
 // Pure policy tests: no HID service is enumerated or modified, no key is posted,
@@ -20,6 +20,7 @@ enum TypelessCoreTests {
         }
 
         testMapper(check: check)
+        testConfigurableKeys(check: check)
         testSessionLifecycle(check: check)
         testHoldLifecycle(check: check)
         print("Typeless core: \(checks) checks passed; no hardware opened, system mappings written, keys posted, or audio streamed.")
@@ -220,6 +221,98 @@ enum TypelessCoreTests {
         }, "software Fn always uses macOS virtual key 63")
         check(posted[0].flags.contains(.maskSecondaryFn) && !posted[1].flags.contains(.maskSecondaryFn),
               "software Fn carries the secondary-Fn flag only while pressed")
+    }
+
+    private static func testConfigurableKeys(
+        check: (_ condition: @autoclosure () -> Bool, _ label: String) -> Void
+    ) {
+        for preset in VoiceInputPreset.allCases {
+            let migrated = VoiceShortcutOptions.load(nil, preset: preset)
+            check(migrated.key == .fn, "older settings keep Fn for \(preset)")
+            check(migrated.behavior == (preset == .off ? .toggleFunction : preset.behavior),
+                  "migration retains the preset timing")
+        }
+        let custom = VoiceShortcutOptions(behavior: .holdFunction, key: .rightCommand)
+        check(VoiceShortcutOptions.load(try? JSONEncoder().encode(custom), preset: .typeless) == custom,
+              "custom key and timing survive restart without being reset by the app preset")
+        for malformed in ["{}", "{\"behavior\":\"holdFunction\",\"key\":\"unknown\"}",
+                          "{\"behavior\":\"off\",\"key\":\"command\"}"] {
+            check(VoiceShortcutOptions.load(Data(malformed.utf8), preset: .doubao) ==
+                  VoiceShortcutOptions(behavior: .holdFunction, key: .fn),
+                  "corrupt or unsupported settings recover to the previous Fn preset")
+        }
+        check(VoiceShortcutKey.command.keyCode == 55 && VoiceShortcutKey.rightCommand.keyCode == 54,
+              "left and right Command use distinct macOS virtual keys")
+        check(VoiceShortcutKey.f5.keyCode == 96 && VoiceShortcutKey.f13.keyCode == 105,
+              "function keys use keyboard virtual codes rather than HID usages")
+        for key in VoiceShortcutKey.allCases {
+            var events: [CGEvent] = []
+            let injector = VoiceShortcutKeyInjector(accessibilityTrusted: { true }, eventPoster: { events.append($0) })
+            check(injector.setPressed(true, key: key) && injector.setPressed(false, key: key), "paired \(key) events")
+            check(events.count == 2 && events.allSatisfy {
+                $0.getIntegerValueField(.keyboardEventKeycode) == Int64(key.keyCode)
+            }, "only the selected key is emitted")
+            check(events[0].type == (key.modifier == nil ? .keyDown : .flagsChanged) &&
+                  events[1].type == (key.modifier == nil ? .keyUp : .flagsChanged), "correct event type for \(key)")
+            check(events[0].flags == (key.modifier ?? []) && events[1].flags.isEmpty,
+                  "selected modifier is balanced without leaking Fn")
+            check(events.allSatisfy {
+                $0.getIntegerValueField(.eventSourceUserData) == MacFunctionKeyInjector.syntheticEventMarker
+            }, "voice output carries the marker allowed by native-event suppression")
+        }
+        var trusted = false
+        var captured: [CGEvent] = []
+        let injector = VoiceShortcutKeyInjector(accessibilityTrusted: { trusted }, eventPoster: { captured.append($0) })
+        check(!injector.setPressed(true, key: .command) && captured.isEmpty, "no output without Accessibility")
+        trusted = true
+        check(injector.setPressed(true, key: .command), "Command press succeeds")
+        trusted = false
+        check(!injector.setPressed(false, key: .fn) && injector.pressedKey == .command,
+              "failed release retains original Command target")
+        trusted = true
+        check(!injector.setPressed(true, key: .option), "no new key while old release is unconfirmed")
+        check(injector.setPressed(false, key: .option) && captured.last?.getIntegerValueField(.keyboardEventKeycode) == 55,
+              "cleanup releases original Command even if the requested key changed")
+
+        // Run the actual tap/hold controllers with captured keyboard output.
+        // No event reaches the system; synthetic audio is kept in memory.
+        for key in [VoiceShortcutKey.command, .rightOption, .fn, .f13] {
+            for toggle in [true, false] {
+                var events: [CGEvent] = []
+                var drained: (() -> Void)?
+                let emitter = VoiceShortcutKeyInjector(accessibilityTrusted: { true }, eventPoster: { events.append($0) })
+                let scheduler = VoiceFnManualScheduler()
+                var audio: [[Int16]] = []
+                let tap = VoiceFnTapSessionController(schedule: scheduler.schedule,
+                    setFunctionKeyPressed: { emitter.setPressed($0, key: key) },
+                    enqueueAudio: { audio.append($0) }, drainAudio: { drained = $0 },
+                    onFailure: { fatalError("unexpected tap failure: \($0)") })
+                let hold = VoiceFnHoldSessionController(
+                    setFunctionKeyPressed: { emitter.setPressed($0, key: key) },
+                    drainAudio: { drained = $0 }, onFailure: { fatalError("unexpected hold failure: \($0)") })
+                if toggle {
+                    tap.setEnabled(true)
+                    check(tap.startVoice() && tap.receive([1, 2]), "custom-key tap accepts pre-roll")
+                    check(audio.isEmpty, "audio waits for complete opening tap")
+                    scheduler.advance(by: 0.15); scheduler.advance(by: 0.12)
+                    check(audio == [[1, 2]] && events.count == 2, "pre-roll follows opening key-up")
+                    check(tap.stopVoice(), "tap waits for tail drain")
+                } else {
+                    hold.setEnabled(true)
+                    check(hold.startVoice() && hold.stopVoice(), "custom-key hold begins tail drain")
+                    check(events.count == 1 && emitter.pressedKey == key, "key stays pressed through tail drain")
+                }
+                var canApplyNewKey = false
+                if toggle { tap.setEnabled(false) { canApplyNewKey = true } }
+                else { hold.setEnabled(false) { canApplyNewKey = true } }
+                check(!canApplyNewKey, "settings cannot switch the key during old tail drain")
+                drained?(); scheduler.runAll()
+                check(canApplyNewKey && emitter.pressedKey == nil, "settings switch after old key releases")
+                check(events.count == (toggle ? 4 : 2) && events.allSatisfy {
+                    $0.getIntegerValueField(.keyboardEventKeycode) == Int64(key.keyCode)
+                }, "whole tap pair or hold uses the same selected key")
+            }
+        }
     }
 
     private static func testHoldLifecycle(

@@ -122,11 +122,11 @@ struct MapperView: View {
                                  granted: model.inputMonitoringGranted,
                                  request: model.requestInputMonitoring,
                                  openSettings: model.openInputMonitoringSettings)
-                PermissionStatus(title: "主程序辅助功能", detail: "发送映射目标键，以及语音软件预设所需的软件 Fn。",
+                PermissionStatus(title: "主程序辅助功能", detail: "发送映射目标键，以及语音软件设置的快捷键。",
                                  granted: model.accessibilityGranted,
                                  request: model.requestAccessibility,
                                  openSettings: model.openAccessibilitySettings)
-                Text("按键映射只使用上面两项主程序权限：共享读取已绑定的 RC003-MS，并屏蔽对应原按键后发送映射目标键。普通麦克风接入不需要这两项；语音软件预设只需要辅助功能来发送软件 Fn。")
+                Text("按键映射只使用上面两项主程序权限：共享读取已绑定的 RC003-MS，并屏蔽对应原按键后发送映射目标键。普通麦克风接入不需要这两项；语音软件联动只需要辅助功能来发送所选快捷键。")
                     .foregroundStyle(MapperColors.muted)
                 HStack {
                     Text(model.connectionText).foregroundStyle(MapperColors.muted)
@@ -464,14 +464,40 @@ private struct VoiceConnectionSection: View {
                     .frame(maxWidth: 300)
                     .disabled(!model.canChangeVoiceInputPreset)
                     Spacer(minLength: 8)
-                    Label(model.voiceShortcutActive ? model.voiceInputPreset.readinessTitle :
+                    Label(model.voiceShortcutActive ? model.voiceShortcutOptions.readinessTitle :
                           model.voiceShortcutRestorationPending ? "等待恢复原映射" :
                           model.voiceShortcutEnabled ? "等待语音键中和" : "未启用",
                           systemImage: model.voiceShortcutActive ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(model.voiceShortcutActive ? MapperColors.green :
                                          model.voiceShortcutRestorationPending ? MapperColors.amber : MapperColors.muted)
                 }
-                Text(model.voiceInputPreset.detail)
+                if model.voiceShortcutEnabled {
+                    HStack(spacing: 12) {
+                        Picker("触发方式", selection: Binding(
+                            get: { model.voiceShortcutOptions.behavior },
+                            set: { model.setVoiceShortcutMode($0) }
+                        )) {
+                            Text(VoiceShortcutBehavior.toggleFunction.title).tag(VoiceShortcutBehavior.toggleFunction)
+                            Text(VoiceShortcutBehavior.holdFunction.title).tag(VoiceShortcutBehavior.holdFunction)
+                        }
+                        .frame(maxWidth: 330)
+                        Picker("快捷键", selection: Binding(
+                            get: { model.voiceShortcutOptions.key },
+                            set: { model.setVoiceShortcutKey($0) }
+                        )) {
+                            ForEach(VoiceShortcutKey.allCases) { key in
+                                Text(key.title).tag(key)
+                            }
+                        }
+                        .frame(maxWidth: 250)
+                        Spacer(minLength: 0)
+                    }
+                    .disabled(!model.canChangeVoiceInputPreset)
+                    Text("请在目标语音软件中设置相同的按键和点按 / 长按方式；无论选哪种方式，说话时都需按住遥控器语音键。")
+                        .foregroundStyle(MapperColors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Text(model.voiceShortcutDetail)
                     .foregroundStyle(MapperColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(model.voiceShortcutStatus)
@@ -479,8 +505,11 @@ private struct VoiceConnectionSection: View {
                                      model.voiceShortcutRestorationPending
                                      ? MapperColors.amber : MapperColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("这些预设发送 macOS 软件 Fn 事件，不伪装成实体 Globe 键。Typeless 已在本机实测；其他软件仍需以其当前版本和快捷键设置做首次验证。")
+                Text(model.voiceShortcutOptions.key == .fn
+                     ? "Fn 使用 macOS 软件事件，不等同于实体 Globe 键。其他按键与软件组合需首次验证。"
+                     : "发送所选按键的 macOS 软件事件；目标软件须支持该快捷键。长按修饰键期间，其他键盘操作也会受它影响；空格或 Return 可能输入文本或触发发送。")
                     .foregroundStyle(MapperColors.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .font(.system(size: 11))
             .padding(10)

@@ -29,7 +29,7 @@ struct EngineLogicTests {
               VoiceInputPreset.lightningAssist.behavior == .holdFunction,
               "push-to-talk applications share the held Fn behavior")
         check(VoiceInputPreset.off.behavior == .off &&
-              VoiceInputPreset.allCases.count == 6,
+              VoiceInputPreset.allCases.count == 7 && VoiceInputPreset.custom.behavior == .toggleFunction,
               "voice application preset catalog is explicit and complete")
         let realSequence: [UInt16] = [0x35, 0x52, 0x51, 0x50, 0x4F, 0x28, 0xF1, 0x4A, 0x65, 0x66, 0x80, 0x81]
         for usage in realSequence {

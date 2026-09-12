@@ -20,7 +20,7 @@ run_test ConfigurationTests "$S/Models.swift" "$S/DeviceProfile.swift" "$S/Confi
 run_test DeviceProfileTests "$S/DeviceProfile.swift" "$S/DeviceBindingStore.swift"
 run_test HIDSessionCoreTests "$APP_DIR/HIDService/HIDSessionCore.swift"
 run_test EngineLogicTests "$S/Models.swift" "$S/DeviceProfile.swift" "$S/RemoteVoiceFunctionMapper.swift" "$S/MappingEngine.swift" "$APP_DIR/HIDService/HIDSessionCore.swift"
-run_test TypelessCoreTests "$S/RemoteVoiceFunctionMapper.swift" "$S/VoiceFnTapSessionController.swift" "$S/VoiceFnHoldSessionController.swift"
+run_test TypelessCoreTests "$S/Models.swift" "$S/RemoteVoiceFunctionMapper.swift" "$S/VoiceFnTapSessionController.swift" "$S/VoiceFnHoldSessionController.swift"
 run_test RecorderTests "$S/Models.swift" "$S/KeyNames.swift"
 run_test VoiceTests "$S/Models.swift" "$S/DeviceProfile.swift" "$S/RemoteVoiceFunctionMapper.swift" \
   "$S/VoiceFnTapSessionController.swift" "$S/VoiceFnHoldSessionController.swift" "$S/RemoteVoiceService.swift" "$S/VoiceAudioOutput.swift"

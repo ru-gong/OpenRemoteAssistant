@@ -239,6 +239,10 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
     var validateVoiceShortcutBeforeActivation: (() -> Bool)?
     private(set) var status = RemoteVoiceStatus()
     private(set) var voiceShortcutBehavior: VoiceShortcutBehavior = .off
+    private(set) var voiceShortcutKey: VoiceShortcutKey = .fn
+    private(set) var isConfiguringVoiceShortcut = false
+    private var shortcutConfigurationGeneration: UInt64 = 0
+    var isVoiceButtonHeld: Bool { hold?.held == true }
     static func availableAudioDevices() -> [VoiceAudioDevice] { VoiceAudioCatalog.devices() }
 
     private struct Configuration {
@@ -275,8 +279,12 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
     private var audioReceipt = RC003AudioReceipt()
     private var earlyAudio = Data()
     private var output = VoiceAudioOutput()
+    private let shortcutKeyInjector = VoiceShortcutKeyInjector()
     private lazy var voiceFnTapSession = VoiceFnTapSessionController(
-        setFunctionKeyPressed: { MacFunctionKeyInjector.setPressed($0) },
+        setFunctionKeyPressed: { [weak self] down in
+            guard let self else { return false }
+            return self.shortcutKeyInjector.setPressed(down, key: self.voiceShortcutKey)
+        },
         enqueueAudio: { [weak self] samples in self?.enqueueDecodedFrame(samples) },
         drainAudio: { [weak self] completion in
             guard let self else { completion(); return }
@@ -302,12 +310,15 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
                 self.completionHandlers.append { [weak self] in
                     self?.onVoiceShortcutFailure?(failure)
                 }
-                self.stop("语音快捷键 Fn \(stage)失败；已立即关麦并停止音频。")
+                self.stop("语音快捷键 \(self.voiceShortcutKey.title) \(stage)失败；已立即关麦并停止音频。")
             }
         }
     )
     private lazy var voiceFnHoldSession = VoiceFnHoldSessionController(
-        setFunctionKeyPressed: { MacFunctionKeyInjector.setPressed($0) },
+        setFunctionKeyPressed: { [weak self] down in
+            guard let self else { return false }
+            return self.shortcutKeyInjector.setPressed(down, key: self.voiceShortcutKey)
+        },
         drainAudio: { [weak self] completion in
             guard let self else { completion(); return }
             self.audioDeadline?.cancel()
@@ -321,7 +332,7 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
                 self.completionHandlers.append { [weak self] in
                     self?.onVoiceShortcutFailure?(failure)
                 }
-                self.stop("语音快捷键 Fn \(failure.stageDescription)失败；已立即关麦并停止音频。")
+                self.stop("语音快捷键 \(self.voiceShortcutKey.title) \(failure.stageDescription)失败；已立即关麦并停止音频。")
             }
         }
     )
@@ -350,16 +361,27 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
         targetBinding = binding?.isValid == true ? binding : nil
     }
 
-    /// Configures one explicit software-Fn interaction. Toggle mode uses two
+    /// Configures one explicit keyboard interaction. Toggle mode uses two
     /// short taps; hold mode presses before MIC_OPEN and releases after tail
     /// audio drains. Both paths are balanced on stop and shutdown.
-    func setVoiceShortcutBehavior(_ behavior: VoiceShortcutBehavior, completion: (() -> Void)? = nil) {
+    func setVoiceShortcutBehavior(_ behavior: VoiceShortcutBehavior, key: VoiceShortcutKey? = nil,
+                                  completion: (() -> Void)? = nil) {
         precondition(Thread.isMainThread)
-        guard behavior != voiceShortcutBehavior else { completion?(); return }
+        let nextKey = key ?? voiceShortcutKey
+        guard isConfiguringVoiceShortcut || behavior != voiceShortcutBehavior || nextKey != voiceShortcutKey else { completion?(); return }
+        shortcutConfigurationGeneration &+= 1
+        let configurationGeneration = shortcutConfigurationGeneration
         let previous = voiceShortcutBehavior
-        voiceShortcutBehavior = behavior
+        isConfiguringVoiceShortcut = true
         let activate = { [weak self] in
             guard let self else { completion?(); return }
+            guard self.shortcutConfigurationGeneration == configurationGeneration else { return }
+            // Finish the old controller (including its closing tap) before
+            // changing the target. A session never starts with one key and
+            // ends with another.
+            self.voiceShortcutKey = nextKey
+            self.voiceShortcutBehavior = behavior
+            self.isConfiguringVoiceShortcut = false
             switch behavior {
             case .off:
                 completion?()
@@ -645,15 +667,19 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
             guard phase == .ready else { return }
             switch action {
             case .button(let down):
+                if down && isConfiguringVoiceShortcut {
+                    stop("正在切换语音快捷键；请等待完成后再次按住语音键。")
+                    return
+                }
                 if configuration?.buttonEvents == true { onVoiceButton?(down) }
                 if down, voiceShortcutBehavior != .off {
                     guard validateVoiceShortcutBeforeActivation?() == true else {
-                        stop("语音快捷键未能重新确认遥控器物理 F5 已中和；已立即关麦，未发送 Fn 或声音。")
+                        stop("语音快捷键未能重新确认遥控器物理 F5 已中和；已立即关麦，未发送快捷键或声音。")
                         return
                     }
                     if voiceShortcutBehavior == .holdFunction,
                        !voiceFnHoldSession.startVoice() {
-                        stop("Fn 长按会话未就绪；未发送声音，请重新选择语音软件预设。")
+                        stop("\(voiceShortcutKey.title) 长按会话未就绪；未发送声音，请重新选择语音软件预设。")
                         return
                     }
                 }
@@ -673,7 +699,7 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
                 armAudioDeadline()
                 if voiceShortcutBehavior == .toggleFunction {
                     guard voiceFnTapSession.startVoice() else {
-                        stop("Fn 点按会话未就绪；未发送声音，请重新选择语音软件预设。")
+                        stop("\(voiceShortcutKey.title) 点按会话未就绪；未发送声音，请重新选择语音软件预设。")
                         return
                     }
                 }
@@ -728,7 +754,7 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
                 case .typeless:
                     continue
                 case .stop:
-                    stop("Fn 点按会话已停止；未将声音回落到普通路径。")
+                    stop("\(voiceShortcutKey.title) 点按会话已停止；未将声音回落到普通路径。")
                     return
                 case .direct:
                     enqueueDecodedFrame(frame)
@@ -750,9 +776,9 @@ final class RemoteVoiceService: NSObject, CBCentralManagerDelegate, CBPeripheral
         if first {
             switch voiceShortcutBehavior {
             case .toggleFunction:
-                publish("目标软件已收到开始 Fn 点按；遥控器音频正在送入，松开后排空尾音再点按结束。")
+                publish("已发送开始 \(voiceShortcutKey.title) 点按；遥控器音频正在送入，松开后排空尾音再点按结束。")
             case .holdFunction:
-                publish("目标软件已收到 Fn 按下；遥控器音频正在送入，松开后排空尾音再释放 Fn。")
+                publish("已发送 \(voiceShortcutKey.title) 按下；遥控器音频正在送入，松开后排空尾音再释放 \(voiceShortcutKey.title)。")
             case .off:
                 publish("已收到遥控器音频并送入“遥控器麦克风”组件；目标软件仍需选择该输入，松开语音键停止。")
             }

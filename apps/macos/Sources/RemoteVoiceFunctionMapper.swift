@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 SayAll contributors
 // Modifications Copyright (C) 2026 OpenRemoteAssistant contributors
-// Modified 2026-09-03.
+// Modified 2026-09-12.
 // Adapted from HD838A/remote-mic-app, commit
 // 9e019112fc88534004641499b0b1efc50b491e5e.
 //
@@ -398,7 +398,7 @@ final class RemoteVoiceFunctionMapper {
 /// consistent path.
 enum MacFunctionKeyInjector {
     static let functionKeyCode: CGKeyCode = 63
-    private static let syntheticEventMarker: Int64 = 0x5243_3033_5459_5045
+    static let syntheticEventMarker: Int64 = 0x5243_3033_5459_5045
 
     static var isAccessibilityTrusted: Bool { AXIsProcessTrusted() }
 
@@ -433,3 +433,41 @@ enum MacFunctionKeyInjector {
 // Source-compatible name retained for the fixed upstream Typeless tests and
 // notices. Both names intentionally resolve to the same implementation.
 typealias TypelessFunctionKeyInjector = MacFunctionKeyInjector
+
+/// A key-up always belongs to the key actually pressed, even if configuration
+/// changes during teardown. Controllers still own tap/hold timing and draining.
+final class VoiceShortcutKeyInjector {
+    private(set) var pressedKey: VoiceShortcutKey?
+    private let accessibilityTrusted: () -> Bool
+    private let eventPoster: (CGEvent) -> Void
+
+    init(accessibilityTrusted: @escaping () -> Bool = { AXIsProcessTrusted() },
+         eventPoster: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) }) {
+        self.accessibilityTrusted = accessibilityTrusted
+        self.eventPoster = eventPoster
+    }
+
+    static func makeEvent(key: VoiceShortcutKey, down: Bool) -> CGEvent? {
+        if key == .fn { return MacFunctionKeyInjector.makeEvent(down) }
+        guard let source = CGEventSource(stateID: .hidSystemState),
+              let event = CGEvent(keyboardEventSource: source, virtualKey: key.keyCode, keyDown: down)
+        else { return nil }
+        event.type = key.modifier == nil ? (down ? .keyDown : .keyUp) : .flagsChanged
+        event.flags = down ? (key.modifier ?? []) : []
+        event.setIntegerValueField(.keyboardEventAutorepeat, value: 0)
+        event.setIntegerValueField(.eventSourceUserData, value: MacFunctionKeyInjector.syntheticEventMarker)
+        return event
+    }
+
+    @discardableResult
+    func setPressed(_ down: Bool, key: VoiceShortcutKey) -> Bool {
+        if !down && pressedKey == nil { return true }
+        // Do not start another key while a previous release is unconfirmed.
+        if down && pressedKey != nil { return false }
+        let target = down ? key : (pressedKey ?? key)
+        guard accessibilityTrusted(), let event = Self.makeEvent(key: target, down: down) else { return false }
+        eventPoster(event)
+        pressedKey = down ? target : nil
+        return true
+    }
+}

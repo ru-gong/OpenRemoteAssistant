@@ -8,14 +8,14 @@
 
 - 将遥控器按键映射为键盘按键、组合键或媒体键。
 - 将遥控器自带麦克风显示为 macOS 输入设备“遥控器麦克风”。
-- 支持 Typeless、豆包输入法、微信输入法和闪电说的 Fn 点按/长按预设。
+- 支持语音软件的点按/长按联动，快捷键默认 Fn，可改为 Command 等键。
 - 不做语音转文字，不保存或上传录音。
 
 ## 快速开始
 
 ### 1. 安装
 
-1. 从 [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases) 下载 `OpenRemoteAssistant-0.2.9-development.pkg` 和 `SHA256SUMS.txt`。
+1. 从 [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases) 下载 开发测试 PKG 安装包 和 `SHA256SUMS.txt`。
 2. 升级前按 **⌘Q** 完全退出旧版，然后打开 PKG 并按系统提示安装。
 3. 安装不要求重启。如果音频组件尚未生效，可在结束会议、播放和录音后点击“重新加载音频服务…”。该操作会短暂中断整台 Mac 的声音。
 
@@ -46,6 +46,8 @@
 | 闪电说“直接说” | 开始和结束各点按一次 Fn |
 | 闪电说“帮我说” | 按住语音键期间保持 Fn 按下 |
 
+在“触发方式”中选点按或长按，在“快捷键”中选 Fn、左右 Command / Control / Option / Shift、F1–F20、空格或 Return。**目标软件中必须设置相同的按键和模式**；例如目标软件用点按 Command，就在助手中选“点按”＋对应的左/右 Command。新用户默认 Fn，旧设置升级后保持不变；选择另一软件预设会更新建议模式，保留已选按键。
+
 这些预设只需要“辅助功能”权限，不需要启用完整按键映射。软件 Fn 是 macOS 事件层的 Fn，并非实体 Globe 键；兼容性以目标软件当前版本为准。
 
 ### 5. 自定义按键映射
@@ -61,14 +63,14 @@
 
 ## 基本技术信息
 
-- 版本：0.2.9（build 16）开发测试版。
+- 版本：0.2.10（build 17）开发测试版。
 - 平台：Apple Silicon、macOS 26；当前仅支持 RC003-MS。
 - 音频路径：遥控器 ATVV 音频 → OpenRemoteAssistant → CoreAudio 虚拟输入。
 - 安装内容：主应用、`OpenRemoteAudio.driver` 和按键服务组件；无需另装 BlackHole。
 - 权限：蓝牙用于连接遥控器；完整按键映射需要输入监控和辅助功能；安装、卸载及手动重载音频服务需要管理员授权。
 - 源码构建：依次运行 `zsh scripts/test.zsh`、`zsh scripts/build-driver.zsh`、`zsh scripts/build-app.zsh` 和 `python3 scripts/package.py --development`。
 
-当前开发包采用 ad-hoc 应用签名、未签名 PKG，尚未完成 Apple 公证。RC003-MS 麦克风进入 Typeless 的基本链路已实测可用；其他语音软件预设、全部实体按键和干净 Mac 安装仍需继续验证。
+当前开发包采用 ad-hoc 应用签名、未签名 PKG，尚未完成 Apple 公证。RC003-MS 麦克风进入 Typeless 的基本链路已实测可用；新增自选快捷键组合、其他语音软件预设、全部实体按键和干净 Mac 安装仍需继续验证。
 
 ## 开源许可
 

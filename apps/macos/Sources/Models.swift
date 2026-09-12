@@ -64,10 +64,110 @@ enum RemoteButton: String, CaseIterable, Codable, Identifiable {
     }
 }
 
-enum VoiceShortcutBehavior: String, Codable, Equatable {
+enum VoiceShortcutBehavior: String, Codable, Hashable {
     case off
+    // Keep the existing raw values so saved settings remain compatible.
     case holdFunction
     case toggleFunction
+
+    var title: String {
+        switch self {
+        case .off: return "不联动"
+        case .holdFunction: return "长按（按住说话）"
+        case .toggleFunction: return "点按（开始、结束各一次）"
+        }
+    }
+}
+
+/// Keyboard targets only: media keys and lock keys cannot accidentally become
+/// voice toggles. Left/right modifiers have distinct virtual key codes.
+enum VoiceShortcutKey: String, Codable, CaseIterable, Identifiable {
+    case fn, command, rightCommand, control, rightControl, option, rightOption, shift, rightShift
+    case f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20
+    case space, returnKey
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .fn: return "Fn"
+        case .command: return "左 Command ⌘"
+        case .rightCommand: return "右 Command ⌘"
+        case .control: return "左 Control ⌃"
+        case .rightControl: return "右 Control ⌃"
+        case .option: return "左 Option ⌥"
+        case .rightOption: return "右 Option ⌥"
+        case .shift: return "左 Shift ⇧"
+        case .rightShift: return "右 Shift ⇧"
+        case .space: return "空格"
+        case .returnKey: return "Return ↩"
+        default: return rawValue.uppercased()
+        }
+    }
+    var keyCode: UInt16 {
+        switch self {
+        case .fn: return 63
+        case .command: return 55
+        case .rightCommand: return 54
+        case .control: return 59
+        case .rightControl: return 62
+        case .option: return 58
+        case .rightOption: return 61
+        case .shift: return 56
+        case .rightShift: return 60
+        case .f1: return 122
+        case .f2: return 120
+        case .f3: return 99
+        case .f4: return 118
+        case .f5: return 96
+        case .f6: return 97
+        case .f7: return 98
+        case .f8: return 100
+        case .f9: return 101
+        case .f10: return 109
+        case .f11: return 103
+        case .f12: return 111
+        case .f13: return 105
+        case .f14: return 107
+        case .f15: return 113
+        case .f16: return 106
+        case .f17: return 64
+        case .f18: return 79
+        case .f19: return 80
+        case .f20: return 90
+        case .space: return 49
+        case .returnKey: return 36
+        }
+    }
+    var modifier: CGEventFlags? {
+        switch self {
+        case .fn: return .maskSecondaryFn
+        case .command, .rightCommand: return .maskCommand
+        case .control, .rightControl: return .maskControl
+        case .option, .rightOption: return .maskAlternate
+        case .shift, .rightShift: return .maskShift
+        default: return nil
+        }
+    }
+}
+
+struct VoiceShortcutOptions: Codable, Equatable {
+    var behavior: VoiceShortcutBehavior
+    var key: VoiceShortcutKey
+
+    static func load(_ data: Data?, preset: VoiceInputPreset) -> Self {
+        if let data, let saved = try? JSONDecoder().decode(Self.self, from: data),
+           saved.behavior != .off { return saved }
+        return Self(behavior: preset.behavior == .off ? .toggleFunction : preset.behavior, key: .fn)
+    }
+
+    var detail: String {
+        behavior == .holdFunction
+            ? "按住遥控器语音键时保持 \(key.title) 按下，松开并送完尾音后释放。"
+            : "语音流开始前点按一次 \(key.title)，松开遥控器并送完尾音后再点按一次。"
+    }
+    var readinessTitle: String {
+        "\(key.title) \(behavior == .holdFunction ? "长按" : "点按")已就绪"
+    }
 }
 
 enum VoiceInputPreset: String, CaseIterable, Identifiable, Hashable {
@@ -77,52 +177,30 @@ enum VoiceInputPreset: String, CaseIterable, Identifiable, Hashable {
     case weType
     case lightningDirect
     case lightningAssist
+    case custom
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .off: return "不联动快捷键"
-        case .typeless: return "Typeless · 点按 Fn"
-        case .doubao: return "豆包输入法 · 按住 Fn"
-        case .weType: return "微信输入法 · 按住 Fn"
-        case .lightningDirect: return "闪电说“直接说” · 点按 Fn"
-        case .lightningAssist: return "闪电说“帮我说” · 按住 Fn"
+        case .typeless: return "Typeless"
+        case .doubao: return "豆包输入法"
+        case .weType: return "微信输入法"
+        case .lightningDirect: return "闪电说“直接说”"
+        case .lightningAssist: return "闪电说“帮我说”"
+        case .custom: return "其他软件 / 自定义"
         }
     }
 
     var behavior: VoiceShortcutBehavior {
         switch self {
         case .off: return .off
-        case .typeless, .lightningDirect: return .toggleFunction
+        case .typeless, .lightningDirect, .custom: return .toggleFunction
         case .doubao, .weType, .lightningAssist: return .holdFunction
         }
     }
 
-    var detail: String {
-        switch self {
-        case .off:
-            return "只传送遥控器声音，不向系统发送语音快捷键。"
-        case .typeless:
-            return "语音流开始前短点一次 Fn，松开并送完尾音后再点一次。"
-        case .doubao:
-            return "按住遥控器语音键时保持 Fn 按下，送完尾音后释放；豆包内请选择“按住说话”。"
-        case .weType:
-            return "按住遥控器语音键时保持 Fn 按下，送完尾音后释放；微信输入法内请选择长按模式。"
-        case .lightningDirect:
-            return "语音流开始前短点一次 Fn，松开并送完尾音后再点一次；闪电说内把“直接说”快捷键设为 Fn。"
-        case .lightningAssist:
-            return "按住遥控器语音键时保持 Fn 按下，送完尾音后释放；闪电说内把“帮我说”快捷键设为 Fn。"
-        }
-    }
-
-    var readinessTitle: String {
-        switch behavior {
-        case .off: return "未启用"
-        case .holdFunction: return "Fn 长按已就绪"
-        case .toggleFunction: return "Fn 点按已就绪"
-        }
-    }
 }
 
 struct KeyCombo: Codable, Equatable {

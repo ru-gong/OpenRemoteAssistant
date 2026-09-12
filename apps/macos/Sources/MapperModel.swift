@@ -174,6 +174,7 @@ final class MapperModel: ObservableObject {
     @Published var voiceOutputDevices: [VoiceAudioDevice] = []
     @Published var selectedVoiceOutputUID = ""
     @Published private(set) var voiceInputPreset: VoiceInputPreset = .off
+    @Published private(set) var voiceShortcutOptions = VoiceShortcutOptions(behavior: .toggleFunction, key: .fn)
     @Published private(set) var voiceShortcutActive = false
     @Published private(set) var typelessInstalled = false
     @Published private(set) var voiceShortcutStatus = "未联动语音软件快捷键。"
@@ -222,10 +223,14 @@ final class MapperModel: ObservableObject {
     private var voiceShortcutRecoveryAttempt = 0
     private var voiceShortcutRecoveryWork: DispatchWorkItem?
     private static let voiceInputPresetPreferenceKey = "VoiceInputPreset"
+    private static let voiceShortcutOptionsPreferenceKey = "VoiceShortcutOptions"
     private static let legacyTypelessPreferenceKey = "TypelessCompatibilityEnabled"
     private static let voiceShortcutRecoveryDelays: [TimeInterval] = [0.5, 1, 2, 4, 8]
 
     var voiceShortcutEnabled: Bool { voiceInputPreset != .off }
+    var voiceShortcutDetail: String {
+        voiceShortcutEnabled ? voiceShortcutOptions.detail : "只传送遥控器声音，不向系统发送语音快捷键。"
+    }
 
     var audioConnectionBlockedReason: String? {
         if audioServiceActionsBlocked { return "请先在上方确认音频后台操作已结束。" }
@@ -241,7 +246,7 @@ final class MapperModel: ObservableObject {
 
     var canChangeVoiceInputPreset: Bool {
         !isPreview && !audioServiceActionsBlocked && !isPreparingToQuit && !isLaunchingUninstaller
-            && !isChangingVoiceShortcut && !voiceIsStreaming
+            && !isChangingVoiceShortcut && !voiceIsStreaming && !voice.isVoiceButtonHeld
     }
 
     var voiceShortcutRestorationPending: Bool {
@@ -293,8 +298,9 @@ final class MapperModel: ObservableObject {
                 initialVoicePreset = .off
             }
             voiceInputPreset = initialVoicePreset
+            voiceShortcutOptions = .load(defaults.data(forKey: Self.voiceShortcutOptionsPreferenceKey), preset: initialVoicePreset)
             voiceShortcutStatus = initialVoicePreset != .off
-                ? "正在恢复“\(initialVoicePreset.title)”；尚未发送 Fn 或音频。"
+                ? "正在恢复“\(initialVoicePreset.title)”；尚未发送快捷键或音频。"
                 : "未联动语音软件快捷键。"
         }
         let configURL: URL
@@ -438,7 +444,7 @@ final class MapperModel: ObservableObject {
         }
         voice.onVoiceButton = { [weak self] down in
             guard let self else { return }
-            // A voice preset owns the software Fn. Forwarding the same GATT
+            // A voice preset owns the selected shortcut key. Forwarding the same GATT
             // edge to the ordinary mapper would create a duplicate shortcut.
             if self.voiceShortcutEnabled {
                 self.engine.setVoiceButtonPressed(false)
@@ -452,10 +458,10 @@ final class MapperModel: ObservableObject {
             self?.handleVoiceShortcutFailure(failure)
         }
         voice.validateVoiceShortcutBeforeActivation = { [weak self] in
-            guard let self, self.voiceShortcutEnabled else { return false }
+            guard let self, self.voiceShortcutEnabled, !self.isChangingVoiceShortcut else { return false }
             // HID services can disappear and be recreated while Bluetooth
             // remains connected. Reapply and verify the full transaction for
-            // the bound physical location before every software Fn tap.
+            // the bound physical location before every voice shortcut session.
             self.reconcileVoiceShortcut(resetRecovery: false, forceApply: true)
             return self.voiceShortcutActive
         }
@@ -708,15 +714,17 @@ final class MapperModel: ObservableObject {
             }
             accessibilityGranted = AXIsProcessTrusted()
             guard accessibilityGranted else {
-                voiceShortcutStatus = "发送软件 Fn 需要辅助功能权限；授权后请重新选择语音软件。"
+                voiceShortcutStatus = "发送语音快捷键需要辅助功能权限；授权后请重新选择语音软件。"
                 requestAccessibility()
                 return
             }
             voiceInputPreset = preset
+            if preset != .custom { voiceShortcutOptions.behavior = preset.behavior }
+            saveVoiceShortcutOptions()
             UserDefaults.standard.set(preset.rawValue, forKey: Self.voiceInputPresetPreferenceKey)
             UserDefaults.standard.set(false, forKey: Self.legacyTypelessPreferenceKey)
             isChangingVoiceShortcut = true
-            voiceShortcutStatus = "正在准备“\(preset.title)”并中和遥控器物理 F5；尚未发送 Fn 或音频。"
+            voiceShortcutStatus = "正在准备“\(preset.title)”并中和遥控器物理 F5；尚未发送快捷键或音频。"
             reconcileVoiceShortcut(resetRecovery: true, forceApply: true)
         } else {
             voiceInputPreset = .off
@@ -724,6 +732,32 @@ final class MapperModel: ObservableObject {
             UserDefaults.standard.set(false, forKey: Self.legacyTypelessPreferenceKey)
             disableVoiceShortcut(status: "语音快捷键联动已关闭；遥控器语音键已恢复原映射。")
         }
+    }
+
+    func setVoiceShortcutKey(_ key: VoiceShortcutKey) {
+        guard canChangeVoiceInputPreset, key != voiceShortcutOptions.key else { return }
+        voiceShortcutOptions.key = key
+        voiceShortcutOptionsDidChange()
+    }
+
+    func setVoiceShortcutMode(_ behavior: VoiceShortcutBehavior) {
+        guard canChangeVoiceInputPreset, behavior != .off, behavior != voiceShortcutOptions.behavior else { return }
+        voiceShortcutOptions.behavior = behavior
+        voiceShortcutOptionsDidChange()
+    }
+
+    private func saveVoiceShortcutOptions() {
+        if let data = try? JSONEncoder().encode(voiceShortcutOptions) {
+            UserDefaults.standard.set(data, forKey: Self.voiceShortcutOptionsPreferenceKey)
+        }
+    }
+
+    private func voiceShortcutOptionsDidChange() {
+        saveVoiceShortcutOptions()
+        guard voiceShortcutEnabled else { return }
+        isChangingVoiceShortcut = true
+        voiceShortcutStatus = "正在切换快捷键；先结束上一会话，再应用新设置。"
+        reconcileVoiceShortcut(resetRecovery: true, forceApply: true)
     }
 
     private func reconcileVoiceShortcut(resetRecovery: Bool, forceApply: Bool = false) {
@@ -740,7 +774,7 @@ final class MapperModel: ObservableObject {
         accessibilityGranted = AXIsProcessTrusted()
         guard accessibilityGranted else {
             pauseVoiceShortcutRuntime(
-                status: "辅助功能权限不可用；语音快捷键联动已暂停，未发送 Fn。"
+                status: "辅助功能权限不可用；语音快捷键联动已暂停，未发送快捷键。"
             )
             return
         }
@@ -763,10 +797,14 @@ final class MapperModel: ObservableObject {
             voiceShortcutRecoveryWork?.cancel()
             voiceShortcutRecoveryWork = nil
             voiceShortcutRecoveryAttempt = 0
-            voiceShortcutActive = true
-            voice.setVoiceShortcutBehavior(voiceInputPreset.behavior)
-            isChangingVoiceShortcut = false
-            voiceShortcutStatus = "已就绪：\(voiceInputPreset.detail)"
+            isChangingVoiceShortcut = true
+            voiceShortcutActive = false
+            voice.setVoiceShortcutBehavior(voiceShortcutOptions.behavior, key: voiceShortcutOptions.key) { [weak self] in
+                guard let self else { return }
+                self.voiceShortcutActive = true
+                self.isChangingVoiceShortcut = false
+                self.voiceShortcutStatus = "已就绪：\(self.voiceShortcutDetail)"
+            }
             return
         }
 
@@ -849,7 +887,7 @@ final class MapperModel: ObservableObject {
 
     private func voiceShortcutStatusAfterRestore(success: String, restored: Bool) -> String {
         guard !restored else { return success }
-        return "软件 Fn 已停止，但遥控器语音键原映射尚未确认写回。请保持遥控器在线；程序会继续重试，退出前也会再次检查。"
+        return "语音快捷键已停止，但遥控器语音键原映射尚未确认写回。请保持遥控器在线；程序会继续重试，退出前也会再次检查。"
     }
 
     private func retryPendingVoiceShortcutRestoration() {
@@ -866,7 +904,7 @@ final class MapperModel: ObservableObject {
     private func handleVoiceShortcutFailure(_ failure: VoiceFnTapFailure) {
         voiceInputPreset = .off
         UserDefaults.standard.set(VoiceInputPreset.off.rawValue, forKey: Self.voiceInputPresetPreferenceKey)
-        disableVoiceShortcut(status: "Fn \(failure.stageDescription)失败；已关闭语音快捷键联动并恢复遥控器原映射。")
+        disableVoiceShortcut(status: "\(voiceShortcutOptions.key.title) \(failure.stageDescription)失败；已关闭语音快捷键联动并恢复遥控器原映射。")
     }
 
     private func restoreVoiceShortcutMappingForDeviceChange() {

@@ -62,11 +62,13 @@ at most 0.75 seconds before the closing Fn tap. Generation tracking, cancelled
 tasks and explicit shutdown/restore paths isolate rapid consecutive sessions
 and clean up on disable, device change, failure and application exit.
 
+Since 0.2.10, the adapted tap/hold controllers can emit a user-selected key instead of Fn. Fn remains the default and retains the original event path; other modifiers and ordinary keyboard keys use their corresponding macOS events. Configuration changes complete the old key session first. These custom combinations still require physical validation.
+
 This compatibility mode is disabled by default. The user has confirmed the
 basic RC003-MS-to-Typeless path on the current test Mac; the full stress and
 failure checklist and the added Doubao, WeChat Input and Shandianshuo presets
 still require separate physical validation. It uses the main application's macOS Accessibility
-permission to post Fn events; it does not require full key mapping, Input
+permission to post selected keyboard events; it does not require full key mapping, Input
 Monitoring, the privileged HID takeover, or its administrator authorization.
 The user must still select “遥控器麦克风” as Typeless's input device. No SayAll
 or remote-mic-app name, bundle identifier, binary, logo, app icon, brand asset,

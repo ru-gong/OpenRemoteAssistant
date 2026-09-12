@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Portions Copyright (C) 2026 SayAll contributors
 // Modifications Copyright (C) 2026 OpenRemoteAssistant contributors
-// Modified 2026-09-03.
+// Modified 2026-09-12.
 // Shared-reading and event-suppression portions adapted from
 // HD838A/remote-mic-app commit 9e019112fc88534004641499b0b1efc50b491e5e.
 
@@ -98,7 +98,8 @@ private final class RemoteKeyboardEventSuppressor {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return false
         }
-        if event.getIntegerValueField(.eventSourceUserData) == MappingEngine.injectedEventMarker {
+        let marker = event.getIntegerValueField(.eventSourceUserData)
+        if marker == MappingEngine.injectedEventMarker || marker == MacFunctionKeyInjector.syntheticEventMarker {
             return false
         }
         guard let descriptor = descriptor(type: type, event: event) else { return false }
