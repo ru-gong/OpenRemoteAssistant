@@ -1,83 +1,36 @@
 # 小米蓝牙遥控器助手 / OpenRemoteAssistant
 
-[下载最新版](https://github.com/ru-gong/OpenRemoteAssistant/releases) · [中英文说明](README.zh-CN.en.md) · [问题排查](docs/input-and-microphone.md)
+把 **小米蓝牙遥控器 2 Pro（RC003-MS）** 的按键和麦克风接入电脑，用于语音输入、语音编程和 **web coding**。不做语音转文字，配合你自己的输入法使用。
 
-把**小米蓝牙遥控器 2 Pro** 的按键和麦克风接入 Mac，适用于语音输入、语音编程和 **web coding**。当前仅支持并验证 **RC003-MS**（设备自报 RC003）。
+Use a **Xiaomi Bluetooth Remote 2 Pro (RC003-MS)** as a microphone and configurable keyboard remote for voice input and web coding. Speech recognition is handled by your input app.
 
-## 主要功能
+## 下载 / Downloads
 
-- 将遥控器按键映射为键盘按键、组合键或媒体键。
-- 将遥控器自带麦克风显示为 macOS 输入设备“遥控器麦克风”。
-- 支持语音软件的点按/长按联动，快捷键默认 Fn，可改为 Command 等键。
-- 不做语音转文字，不保存或上传录音。
+| 系统 / Platform | 开发测试版 / Preview | 使用说明 / Guide |
+|---|---|---|
+| Mac（Apple Silicon / macOS 26） | [0.2.10 · PKG](https://github.com/ru-gong/OpenRemoteAssistant/releases/tag/v0.2.10) | [中文](docs/macos-quick-start.md) · [中文 / English](README.zh-CN.en.md) |
+| Windows x64 | [0.3.0 · 安装版 / 便携版](https://github.com/ru-gong/OpenRemoteAssistant/releases/tag/v0.3.0-win) | [中文 / English](apps/windows/README.md) |
 
-## 快速开始
+Windows 10 19045 有开发机测试记录；Windows 11 尚未实测。两个平台独立发版，Windows 0.3.0 不替代 Mac 0.2.10。当前均为开发测试预发布，未完成全部设备与干净系统验收。
 
-### 1. 安装
+Windows has developer-reported testing on Windows 10 build 19045; Windows 11 is unverified. These are separate platform previews, not stable releases.
 
-1. 从 [Releases](https://github.com/ru-gong/OpenRemoteAssistant/releases) 下载 开发测试 PKG 安装包 和 `SHA256SUMS.txt`。
-2. 升级前按 **⌘Q** 完全退出旧版，然后打开 PKG 并按系统提示安装。
-3. 安装不要求重启。如果音频组件尚未生效，可在结束会议、播放和录音后点击“重新加载音频服务…”。该操作会短暂中断整台 Mac 的声音。
+## 快速使用 / Quick start
 
-当前安装包是未公证的开发测试包，可能被 Gatekeeper 提示。请在“系统设置 → 隐私与安全性”查看系统提示，不要关闭 Gatekeeper 或 SIP。
+1. 安装对应系统的版本，在系统蓝牙中配对 RC003-MS，再在助手里扫描并绑定。 / Install, pair RC003-MS in Bluetooth settings, then scan and bind in the app.
+2. **Mac**：连接遥控器麦克风，在输入法中选“遥控器麦克风”。 / Connect audio and select “遥控器麦克风” in your input app.
+3. **Windows**：另装虚拟音频线，在助手开启实时播放并选 `CABLE Input`，输入法选 `CABLE Output`。[具体步骤](apps/windows/README.md)。 / Install a virtual audio cable separately; route app playback to `CABLE Input` and select `CABLE Output` as the input app's microphone.
+4. 按住语音键说话；快捷键和点按/长按模式须与输入法一致。点击遥控器示意图可编辑其他按键映射。 / Hold the voice button to speak, match shortcut and tap/hold mode with your input app, and click the remote diagram to configure other keys.
 
-### 2. 连接遥控器
+使用时须保持助手运行。Mac 关闭窗口后可驻留菜单栏；Windows 关闭窗口即退出。Mac 不保存录音；Windows 默认不保存，可手动启用本地 WAV。 / Keep the app running. Mac can stay in the menu bar; closing the Windows window exits. Mac does not save recordings; Windows offers optional local WAV recording, off by default.
 
-1. 在 macOS 蓝牙设置中配对 RC003-MS。
-2. 打开遥控器助手，点击“查找已连接的遥控器”。
-3. 核对设备信息并确认绑定。一次只连接一只同类遥控器。
+## 基本技术信息 / Technical basics
 
-### 3. 使用遥控器麦克风
+- 仅适配 RC003-MS（设备自报 RC003）；其他遥控器不承诺兼容。 / RC003-MS only; other remotes are not claimed compatible.
+- Mac：Swift / SwiftUI、CoreBluetooth、CoreAudio；自带 OpenRemoteAudio 虚拟麦克风组件。 / Bundled virtual microphone driver.
+- Windows：C# / .NET 9、WinForms / WebView2、WinRT BLE、NAudio WASAPI；**不含虚拟声卡驱动**。 / Virtual audio driver is not bundled.
+- [Mac 构建与排查](docs/macos-quick-start.md) · [Windows 构建与验证范围](apps/windows/docs/build-and-release.md)
 
-1. 点击“连接遥控器麦克风”。
-2. 在 Typeless、输入法或其他目标软件中选择 **“遥控器麦克风”**。
-3. 按住遥控器右上角语音键说话，松开停止。
+项目源码采用 [GPL-3.0-only](LICENSE)；保留 [COPYRIGHT](COPYRIGHT)、[第三方归属](THIRD_PARTY_NOTICES.md) 及 [Windows 组件许可](apps/windows/THIRD_PARTY_NOTICES.md)。第三方组件按各自许可提供。本项目不是小米或所列语音软件的官方产品。
 
-程序没有 30 秒录音上限。目标软件如果没有麦克风选择菜单，可在助手中将它设为系统默认输入；程序不会更改扬声器。使用期间需要保持程序运行，关闭窗口后可以继续驻留菜单栏，按 **⌘Q** 才会完全退出并停止接入。
-
-### 4. 配置语音软件快捷键
-
-先在目标软件中选择“遥控器麦克风”，再在助手的“语音软件”菜单选择预设：
-
-| 软件 | 预设方式 |
-|---|---|
-| Typeless | 开始和结束各点按一次 Fn |
-| 豆包输入法、微信输入法 | 按住语音键期间保持 Fn 按下 |
-| 闪电说“直接说” | 开始和结束各点按一次 Fn |
-| 闪电说“帮我说” | 按住语音键期间保持 Fn 按下 |
-
-在“触发方式”中选点按或长按，在“快捷键”中选 Fn、左右 Command / Control / Option / Shift、F1–F20、空格或 Return。**目标软件中必须设置相同的按键和模式**；例如目标软件用点按 Command，就在助手中选“点按”＋对应的左/右 Command。新用户默认 Fn，旧设置升级后保持不变；选择另一软件预设会更新建议模式，保留已选按键。
-
-这些预设只需要“辅助功能”权限，不需要启用完整按键映射。软件 Fn 是 macOS 事件层的 Fn，并非实体 Globe 键；兼容性以目标软件当前版本为准。
-
-### 5. 自定义按键映射
-
-1. 在“系统设置 → 隐私与安全性”中允许遥控器助手使用“输入监控”和“辅助功能”。
-2. 点击示意图上的遥控器按键。
-3. 选择常用目标键，或点击“键盘录入”录入组合键。
-4. 点击“启用映射”。
-
-## 卸载
-
-在应用的“遥控器”菜单或菜单栏菜单中选择“卸载遥控器助手…”。卸载需要管理员授权，默认保留个人配置，也可以选择删除当前用户的绑定、映射和偏好设置。蓝牙配对和 macOS 管理的系统日志不会被删除。
-
-## 基本技术信息
-
-- 版本：0.2.10（build 17）开发测试版。
-- 平台：Apple Silicon、macOS 26；当前仅支持 RC003-MS。
-- 音频路径：遥控器 ATVV 音频 → OpenRemoteAssistant → CoreAudio 虚拟输入。
-- 安装内容：主应用、`OpenRemoteAudio.driver` 和按键服务组件；无需另装 BlackHole。
-- 权限：蓝牙用于连接遥控器；完整按键映射需要输入监控和辅助功能；安装、卸载及手动重载音频服务需要管理员授权。
-- 源码构建：依次运行 `zsh scripts/test.zsh`、`zsh scripts/build-driver.zsh`、`zsh scripts/build-app.zsh` 和 `python3 scripts/package.py --development`。
-
-当前开发包采用 ad-hoc 应用签名、未签名 PKG，尚未完成 Apple 公证。RC003-MS 麦克风进入 Typeless 的基本链路已实测可用；新增自选快捷键组合、其他语音软件预设、全部实体按键和干净 Mac 安装仍需继续验证。
-
-## 开源许可
-
-项目按 [GNU GPL v3 only](LICENSE) 发布。第三方来源、固定版本及修改声明见 [COPYRIGHT](COPYRIGHT) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。项目不代表小米、Apple 或所列语音软件的官方版本或背书。
-
-更详细的技术与验收资料：
-
-- [按键接管与麦克风连接](docs/input-and-microphone.md)
-- [音频服务激活与恢复](docs/audio-service-reload.md)
-- [RC003-MS 验收清单](docs/rc003-ms-acceptance.md)
+Source is GPL-3.0-only; third-party components retain their own licenses and notices. No affiliation or endorsement is implied.

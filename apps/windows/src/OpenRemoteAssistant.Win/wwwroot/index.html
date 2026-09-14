@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>遥控器助手</title>
+<style>
+  /* ===================== Design tokens ===================== */
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-2: #f1f4f8;
+    --surface-3: #e9edf3;
+    --line: #e2e8f0;
+    --line-2: #eef1f6;
+    --text: #131a24;
+    --text-2: #64748b;
+    --text-3: #94a3b8;
+
+    --accent: #2b7de9;
+    --accent-2: #5b9bf3;
+    --accent-strong: #1a63c4;
+    --accent-soft: #e8f1fe;
+    --accent-ring: rgba(43,125,233,.18);
+
+    --ok: #12a150;
+    --ok-soft: #e7f7ee;
+    --warn: #d99312;
+    --warn-soft: #fdf4e4;
+    --danger: #e5484d;
+    --danger-strong: #c62a2f;
+    --danger-soft: #fdecee;
+
+    --radius: 18px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+
+    --shadow-sm: 0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.05);
+    --shadow: 0 1px 2px rgba(15,23,42,.04), 0 12px 28px -10px rgba(15,23,42,.16);
+    --shadow-lg: 0 28px 64px -20px rgba(15,23,42,.34);
+    --ease: cubic-bezier(.2,.7,.3,1);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Microsoft YaHei UI", "PingFang SC", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(1100px 480px at 12% -12%, #e4eeff 0%, rgba(228,238,255,0) 62%),
+      radial-gradient(900px 420px at 104% -4%, #e6f6ee 0%, rgba(230,246,238,0) 58%),
+      linear-gradient(180deg, #f4f7fc 0%, #eceff5 100%);
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #b2bfd0; background-clip: content-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ===================== Header ===================== */
+  header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 24px;
+    background: rgba(255,255,255,.78);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-bottom: 1px solid var(--line);
+    position: relative; z-index: 6;
+    -webkit-app-region: drag;
+  }
+  .logo {
+    width: 36px; height: 36px; border-radius: 11px;
+    background: linear-gradient(150deg, var(--accent-2), var(--accent) 55%, #1c5fb8);
+    display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 15px; letter-spacing: .5px;
+    box-shadow: 0 6px 16px -6px rgba(43,125,233,.85), inset 0 1px 0 rgba(255,255,255,.45);
+    flex-shrink: 0;
+  }
+  .brand { min-width: 0; }
+  header h1 { font-size: 15.5px; font-weight: 700; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
+  header .ver { color: var(--text-3); font-size: 11.5px; margin-top: 3px; letter-spacing: .2px; }
+  .hdr-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1;
+    transition: background .2s, box-shadow .2s;
+  }
+  .hdr-dot.on { background: var(--ok); box-shadow: 0 0 0 4px rgba(18,161,80,.14); }
+
+  nav {
+    display: flex; gap: 3px; margin-left: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    padding: 4px; border-radius: 12px;
+  }
+  nav button {
+    -webkit-app-region: no-drag;
+    border: none; background: transparent;
+    padding: 7px 16px; border-radius: 9px;
+    font-size: 13px; color: var(--text-2); cursor: pointer;
+    font-family: inherit; font-weight: 500;
+    transition: all .18s var(--ease);
+  }
+  nav button:hover { color: var(--text); background: rgba(255,255,255,.7); }
+  nav button.active {
+    background: #fff; color: var(--accent-strong); font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ===================== Layout ===================== */
+  main { flex: 1; overflow-y: auto; padding: 24px; }
+  .page { display: none; max-width: 900px; margin: 0 auto; }
+  .page.active { display: block; animation: rise .34s var(--ease); }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .card h2 { font-size: 14.5px; font-weight: 700; letter-spacing: .2px; }
+  .card .sub { font-size: 12.5px; color: var(--text-2); margin-top: 5px; line-height: 1.6; }
+
+  /* ===================== Connection hero ===================== */
+  .hero { display: flex; align-items: center; gap: 18px; }
+  .hero-icon {
+    width: 58px; height: 58px; border-radius: 17px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    display: grid; place-items: center; font-size: 27px;
+    flex-shrink: 0;
+    transition: all .25s var(--ease);
+  }
+  .hero-icon.connected {
+    background: linear-gradient(150deg, var(--accent-soft), #f2f8ff);
+    border-color: #cfe2fb;
+    box-shadow: 0 8px 20px -12px rgba(43,125,233,.9);
+  }
+  .hero-body { flex: 1; min-width: 0; }
+  .hero-body .state { font-size: 15.5px; font-weight: 700; margin-bottom: 4px; }
+  .hero-body .detail { font-size: 12.5px; color: var(--text-2); line-height: 1.6; white-space: pre-line; }
+  .hero-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* ===================== Buttons ===================== */
+  button { font-family: inherit; }
+  button.primary {
+    background: linear-gradient(180deg, var(--accent-2), var(--accent));
+    color: #fff; border: 1px solid var(--accent-strong);
+    border-radius: var(--radius-sm);
+    padding: 9px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 18px -8px rgba(43,125,233,.9), inset 0 1px 0 rgba(255,255,255,.35);
+    transition: all .16s var(--ease);
+  }
+  button.primary:hover { transform: translateY(-1px); box-shadow: 0 12px 24px -10px rgba(43,125,233,1), inset 0 1px 0 rgba(255,255,255,.35); }
+  button.primary:active { transform: translateY(0); }
+  button.primary:disabled { opacity: .4; cursor: default; transform: none; box-shadow: none; }
+
+  button.secondary {
+    background: var(--surface); color: var(--text);
+    border: 1px solid #d5dde8; border-radius: var(--radius-sm);
+    padding: 9px 18px; font-size: 13px; font-weight: 500; cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    transition: all .16s var(--ease);
+  }
+  button.secondary:hover { background: var(--surface-2); border-color: #c3cfdd; transform: translateY(-1px); }
+  button.secondary:active { transform: translateY(0); }
+  button.secondary:disabled { opacity: .45; cursor: default; transform: none; }
+
+  button.danger {
+    background: linear-gradient(180deg, #ef5d62, var(--danger));
+    color: #fff; border: 1px solid var(--danger-strong);
+    border-radius: var(--radius-sm);
+    padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 8px 18px -8px rgba(229,72,77,.85), inset 0 1px 0 rgba(255,255,255,.28);
+    transition: all .16s var(--ease);
+  }
+  button.danger:hover { transform: translateY(-1px); }
+  button.danger:disabled { opacity: .4; cursor: default; transform: none; box-shadow: none; }
+
+  button.ghost {
+    background: transparent; color: var(--text-2);
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 8px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer;
+    transition: all .16s var(--ease);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button.ghost:hover { color: var(--text); background: var(--surface-2); border-color: #cbd5e1; }
+  button.ghost-danger {
+    background: transparent; color: var(--danger);
+    border: 1px solid rgba(229,72,77,.32); border-radius: var(--radius-sm);
+    padding: 8px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: all .16s var(--ease);
+  }
+  button.ghost-danger:hover { background: var(--danger-soft); border-color: rgba(229,72,77,.55); }
+
+  /* ===================== Rows / switches ===================== */
+  .row {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 13px 0; border-bottom: 1px solid var(--line-2);
+  }
+  .row:last-child { border-bottom: none; }
+  .row .label { font-size: 13.5px; font-weight: 500; }
+  .row .hint { font-size: 12px; color: var(--text-2); margin-top: 3px; line-height: 1.5; }
+
+  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0; border-radius: 12px;
+    background: #cfd8e3; cursor: pointer;
+    transition: background .2s var(--ease), box-shadow .2s;
+  }
+  .switch .track::after {
+    content: ""; position: absolute; left: 2px; top: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(15,23,42,.3);
+    transition: transform .2s var(--ease);
+  }
+  .switch input:checked + .track { background: linear-gradient(180deg, var(--accent-2), var(--accent)); box-shadow: 0 0 0 4px var(--accent-ring); }
+  .switch input:checked + .track::after { transform: translateX(18px); }
+  .switch input:focus-visible + .track { box-shadow: 0 0 0 4px var(--accent-ring); }
+
+  select {
+    font-family: inherit; font-size: 13px;
+    padding: 8px 12px; border-radius: var(--radius-sm);
+    border: 1px solid #d5dde8; background: var(--surface);
+    color: var(--text); cursor: pointer; outline: none;
+    box-shadow: var(--shadow-sm);
+    transition: border-color .16s, box-shadow .16s;
+  }
+  select:hover { border-color: #c3cfdd; }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-ring); }
+
+  /* ===================== Voice modes ===================== */
+  .voice-modes { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0 6px; }
+  .mode-card {
+    flex: 1; border: 1.5px solid var(--line); border-radius: var(--radius-md);
+    padding: 14px; cursor: pointer; transition: all .18s var(--ease); background: var(--surface);
+    position: relative; overflow: hidden;
+  }
+  .mode-card:hover { border-color: #bccbe0; transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .mode-card.selected { border-color: var(--accent); background: linear-gradient(180deg, #f2f8ff, var(--accent-soft)); box-shadow: 0 8px 20px -14px rgba(43,125,233,1); }
+  .mode-card.selected::before {
+    content: "✓"; position: absolute; top: 10px; right: 12px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .mode-card .m-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .mode-card .m-desc { font-size: 11.5px; color: var(--text-2); line-height: 1.55; }
+
+  /* ===================== Mapping figure ===================== */
+  .mapping-layout { display: flex; gap: 22px; margin-top: 16px; }
+  .remote-fig-wrap { flex-shrink: 0; }
+  #remote-fig { display: block; filter: drop-shadow(0 18px 30px -22px rgba(15,23,42,.6)); }
+  .fig-btn { cursor: pointer; }
+  .fig-btn rect {
+    fill: #fbfcfe; stroke: #d8e0ea; stroke-width: 1.2;
+    transition: fill .15s, stroke .15s;
+  }
+  .fig-btn:hover rect { fill: #eef5ff; stroke: #b7cdea; }
+  .fig-btn.selected rect { fill: #dcecff; stroke: var(--accent); stroke-width: 2; }
+  .fig-btn.selected text { fill: var(--accent-strong); font-weight: 700; }
+  .fig-btn text { fill: #3f5069; font-weight: 500; pointer-events: none; }
+  .fig-btn.has-map rect { stroke: var(--ok); stroke-width: 1.8; }
+  .fig-btn.has-map text { fill: #0d7a3d; }
+  /* 语音键不参与按键映射：固定样式，点击滚动到下方语音快捷方式卡片 */
+  .fig-btn-fixed { cursor: pointer; }
+  .fig-btn-fixed rect { fill: #f4f7fb !important; stroke: #c9d6e6 !important; stroke-dasharray: 3 2 !important; }
+  .fig-btn-fixed text { fill: #6b7c93 !important; font-weight: 700 !important; }
+  .fig-btn-fixed:hover rect { fill: #ecf2f9 !important; }
+  .fig-plate rect { fill: #f3f6fa; stroke: #e6ecf3; stroke-width: 1; }
+
+  .mapping-config { flex: 1; min-width: 0; }
+
+  .editor-empty {
+    padding: 44px 16px; text-align: center; color: var(--text-3); font-size: 13px;
+    border: 1.5px dashed var(--line); border-radius: var(--radius-md);
+    background: #fbfcfe; line-height: 1.9;
+  }
+  .editor-empty .big { font-size: 30px; display: block; margin-bottom: 10px; opacity: .55; }
+  .editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .editor-title { font-size: 17px; font-weight: 700; }
+  .editor-current { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+  .editor-current .tag {
+    display: inline-block; padding: 1px 8px; border-radius: 6px;
+    background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 11.5px;
+  }
+  .capture-box {
+    margin: 16px 0; padding: 24px 16px; text-align: center;
+    border: 2px dashed #c9d4e2; border-radius: var(--radius-md);
+    cursor: pointer; outline: none; background: #fbfcfe;
+    transition: all .18s var(--ease);
+  }
+  .capture-box:hover { border-color: #b0c2da; background: #f7faff; }
+  .capture-box.capturing { border-color: var(--accent); background: var(--accent-soft); border-style: solid; box-shadow: 0 0 0 5px var(--accent-ring); }
+  .capture-hint { font-size: 12.5px; color: var(--text-2); }
+  .capture-value { font-size: 21px; font-weight: 700; margin-top: 9px; color: var(--accent-strong); letter-spacing: .5px; }
+  .capture-box.capturing .capture-value { animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+  .preset-label { font-size: 12.5px; color: var(--text-2); margin: 14px 0 8px; }
+  .preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 8px; }
+  .preset-btn {
+    border: 1px solid #d5dde8; background: var(--surface); color: var(--text);
+    border-radius: var(--radius-sm); padding: 8px 4px; font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: all .15s var(--ease);
+  }
+  .preset-btn:hover { border-color: #b7cdea; background: #f7faff; transform: translateY(-1px); }
+  .preset-btn.active { border-color: var(--accent); color: var(--accent-strong); background: var(--accent-soft); font-weight: 700; }
+
+  /* ===================== Pills / level / log ===================== */
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 20px;
+    background: var(--surface-2); color: var(--text-2);
+    transition: all .2s var(--ease);
+  }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.ok .dot { animation: blink 1.6s ease-in-out infinite; }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+
+  .level-wrap { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 12px; }
+  .level-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--ok), #6fd68a); border-radius: 3px; transition: width .08s linear; }
+
+  .log {
+    background: #0e131b; color: #9fc0f5;
+    border-radius: var(--radius-md);
+    font-family: "Cascadia Code", Consolas, "Courier New", monospace; font-size: 11.5px;
+    padding: 14px 16px; height: 150px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all; line-height: 1.6;
+    border: 1px solid #1c2436;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .log::-webkit-scrollbar-thumb { background: #33405a; background-clip: content-box; }
+
+  /* ===================== Modal ===================== */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 60;
+    background: rgba(15,23,42,.42);
+    backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s var(--ease);
+  }
+  .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    width: min(400px, 88vw);
+    background: var(--surface); border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); padding: 24px;
+    transform: translateY(14px) scale(.97);
+    transition: transform .22s var(--ease);
+  }
+  .modal-backdrop.show .modal { transform: none; }
+  .modal-icon { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; font-size: 21px; background: var(--warn-soft); margin-bottom: 14px; }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .modal-body { font-size: 13px; color: var(--text-2); line-height: 1.7; }
+  .modal-body b { color: var(--text); }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+
+  /* ===================== Toast ===================== */
+  #toast {
+    position: fixed; bottom: 28px; left: 50%;
+    transform: translateX(-50%) translateY(90px) scale(.96);
+    background: rgba(19,26,36,.96); color: #fff; font-size: 13px; font-weight: 500;
+    padding: 12px 22px; border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    opacity: 0; transition: all .28s var(--ease); pointer-events: none; z-index: 99;
+    display: flex; align-items: center; gap: 9px;
+    max-width: 80vw;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">遥</div>
+  <div class="brand">
+    <h1>遥控器助手 <span class="hdr-dot" id="hdr-dot"></span></h1>
+    <div class="ver">Windows 版 0.3.0 · 小米蓝牙遥控器 2 Pro（RC003-MS）</div>
+  </div>
+  <nav>
+    <button data-page="home" class="active">主页</button>
+    <button data-page="mapping">按键映射</button>
+    <button data-page="settings">设置</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ==================== 主页 ==================== -->
+  <section class="page active" id="page-home">
+    <div class="card">
+      <div class="hero">
+        <div class="hero-icon" id="hero-icon">🎮</div>
+        <div class="hero-body">
+          <div class="state" id="conn-state">未连接遥控器</div>
+          <div class="detail" id="conn-detail">点击「查找遥控器」搜索已配对的 RC003-MS。查找前请确认遥控器已开机并在系统蓝牙中配对。</div>
+          <div class="level-wrap"><div class="level-bar" id="level-bar"></div></div>
+        </div>
+        <div class="hero-actions">
+          <button class="secondary" id="btn-discover">查找遥控器</button>
+          <button class="primary" id="btn-voice" disabled>连接语音</button>
+          <button class="danger" id="btn-stop" disabled>断开</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>语音</h2>
+      <div class="sub">按住遥控器语音键说话，松开结束。实时回放可通过扬声器听到，录音可自动保存。</div>
+      <div class="row">
+        <div>
+          <div class="label">实时回放</div>
+          <div class="hint" id="playback-hint">说话时从扬声器实时播出；也可以路由到虚拟声卡，供其它软件当作麦克风</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="opt-playback"><span class="track"></span></label>
+      </div>
+      <div class="row" id="output-device-row" style="display:none;">
+        <div>
+          <div class="label">回放输出设备</div>
+          <div class="hint" id="cable-hint">—</div>
+        </div>
+        <select id="output-device" style="max-width:260px;"></select>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">保存 WAV 录音</div>
+          <div class="hint">每次松开语音键后保存到录音目录</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="opt-record"><span class="track"></span></label>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">录音目录</div>
+          <div class="hint" id="folder-hint">—</div>
+        </div>
+        <div style="display:flex; gap:8px">
+          <button class="secondary" id="btn-open-folder">打开</button>
+          <button class="secondary" id="btn-pick-folder">更改…</button>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">本次会话统计</div>
+          <div class="hint" id="stats-hint">帧 0 · 采样 0</div>
+        </div>
+        <span class="pill" id="stream-pill"><span class="dot"></span><span id="stream-text">空闲</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>运行日志</h2>
+      <div class="sub">协议、映射与错误信息（仅供诊断）</div>
+      <div class="log" id="log-box">等待事件…</div>
+    </div>
+  </section>
+
+  <!-- ==================== 按键映射 ==================== -->
+  <section class="page" id="page-mapping">
+    <div class="card">
+      <div class="hero">
+        <div class="hero-icon" id="map-hero-icon">⌨️</div>
+        <div class="hero-body">
+          <div class="state">按键映射</div>
+          <div class="detail">把遥控器按键变成键盘组合键。启用后遥控器按键会被拦截并转换，真实键盘不受影响。<br>点击右侧示意图上的按键进行配置。</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="opt-mapping"><span class="track"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2>各按键配置</h2>
+          <div class="sub" id="map-sub">点击左侧遥控器示意图上的按键选中，右侧配置目标；已映射的按键显示绿色边框。</div>
+        </div>
+        <button class="ghost-danger" id="btn-reset-mapping" title="清空全部按键映射，恢复默认">↺ 恢复默认</button>
+      </div>
+      <div class="mapping-layout">
+        <div class="remote-fig-wrap">
+          <svg id="remote-fig" viewBox="0 0 180 480" width="196" style="user-select:none;">
+            <defs>
+              <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="55%" stop-color="#f4f7fb"/>
+                <stop offset="100%" stop-color="#e7ecf3"/>
+              </linearGradient>
+              <linearGradient id="glossGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity=".9"/>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+
+            <!-- body -->
+            <rect x="6" y="4" width="168" height="472" rx="30" fill="url(#bodyGrad)" stroke="#dbe3ed" stroke-width="1.5"/>
+            <rect x="14" y="12" width="152" height="60" rx="22" fill="url(#glossGrad)"/>
+
+            <g id="fig-buttons" font-family="'Microsoft YaHei UI',sans-serif">
+              <!-- top row -->
+              <g class="fig-btn" data-btn="power" transform="translate(22,26)"><rect width="38" height="34" rx="11"/><text x="19" y="21" text-anchor="middle" font-size="11">电源</text></g>
+              <g class="fig-btn fig-btn-fixed" data-btn="microphone" transform="translate(120,26)"><rect width="38" height="34" rx="11"/><text x="19" y="21" text-anchor="middle" font-size="11">语音</text></g>
+
+              <!-- d-pad plate -->
+              <g class="fig-plate" pointer-events="none"><rect x="24" y="84" width="132" height="116" rx="22"/></g>
+              <g class="fig-btn" data-btn="up" transform="translate(66,88)"><rect width="48" height="28" rx="9"/><text x="24" y="18" text-anchor="middle" font-size="11">▲</text></g>
+              <g class="fig-btn" data-btn="left" transform="translate(26,120)"><rect width="30" height="44" rx="9"/><text x="15" y="26" text-anchor="middle" font-size="11">◀</text></g>
+              <g class="fig-btn" data-btn="ok" transform="translate(68,120)"><rect width="44" height="44" rx="15"/><text x="22" y="27" text-anchor="middle" font-size="11">OK</text></g>
+              <g class="fig-btn" data-btn="right" transform="translate(124,120)"><rect width="30" height="44" rx="9"/><text x="15" y="26" text-anchor="middle" font-size="11">▶</text></g>
+              <g class="fig-btn" data-btn="down" transform="translate(66,168)"><rect width="48" height="28" rx="9"/><text x="24" y="18" text-anchor="middle" font-size="11">▼</text></g>
+
+              <!-- nav plate -->
+              <g class="fig-plate" pointer-events="none"><rect x="24" y="216" width="44" height="168" rx="18"/></g>
+              <g class="fig-btn" data-btn="back" transform="translate(26,224)"><rect width="40" height="38" rx="11"/><text x="20" y="24" text-anchor="middle" font-size="11">返回</text></g>
+              <g class="fig-btn" data-btn="home" transform="translate(26,282)"><rect width="40" height="38" rx="11"/><text x="20" y="24" text-anchor="middle" font-size="11">主页</text></g>
+              <g class="fig-btn" data-btn="menu" transform="translate(26,340)"><rect width="40" height="38" rx="11"/><text x="20" y="24" text-anchor="middle" font-size="11">菜单</text></g>
+
+              <!-- volume plate -->
+              <g class="fig-plate" pointer-events="none"><rect x="114" y="236" width="46" height="166" rx="18"/></g>
+              <g class="fig-btn" data-btn="volume_up" transform="translate(118,244)"><rect width="38" height="38" rx="11"/><text x="19" y="18" text-anchor="middle" font-size="10">音量</text><text x="19" y="31" text-anchor="middle" font-size="12" font-weight="700">＋</text></g>
+              <g class="fig-btn" data-btn="volume_down" transform="translate(118,300)"><rect width="38" height="38" rx="11"/><text x="19" y="18" text-anchor="middle" font-size="10">音量</text><text x="19" y="31" text-anchor="middle" font-size="12" font-weight="700">−</text></g>
+              <g class="fig-btn" data-btn="tv" transform="translate(118,358)"><rect width="38" height="38" rx="11"/><text x="19" y="24" text-anchor="middle" font-size="11">TV</text></g>
+            </g>
+          </svg>
+        </div>
+
+        <div class="mapping-config" id="button-editor">
+          <div class="editor-empty" id="editor-empty">
+            <span class="big">📺</span>
+            点击左侧遥控器示意图上的按键<br>选中的按键将在这里配置映射
+          </div>
+          <div id="editor-panel" style="display:none;">
+            <div class="editor-head">
+              <div>
+                <div class="editor-title" id="ed-title">—</div>
+                <div class="editor-current" id="ed-current">当前：未映射</div>
+              </div>
+              <button class="secondary" id="ed-clear" style="font-size:12px; padding:7px 14px;">清除映射</button>
+            </div>
+            <div class="capture-box" id="ed-capture" tabindex="0">
+              <div class="capture-hint" id="ed-capture-hint">点击这里，然后直接按键盘组合键（如 Ctrl+Shift+Tab）</div>
+              <div class="capture-value" id="ed-captured">未捕获</div>
+            </div>
+            <div class="preset-label">或从常用预设中选择：</div>
+            <div class="preset-grid" id="ed-presets"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="voice-card">
+      <h2>语音键快捷方式</h2>
+      <div class="sub">按遥控器语音键时，本程序替你按下目标软件的「开始/结束说话」快捷键。先在目标软件里把快捷键设置成下面选的那个键。</div>
+      <div class="voice-modes">
+        <div class="mode-card" data-mode="toggle">
+          <div class="m-title">点按两下</div>
+          <div class="m-desc">按一下语音键 = 按一下快捷键开始说话<br>再按一下语音键 = 结束<br><br>适合纯手动控制的场景</div>
+        </div>
+        <div class="mode-card" data-mode="holdtap">
+          <div class="m-title">按住说话·自动结束（推荐）</div>
+          <div class="m-desc">按住语音键说话，按下时自动点一下快捷键（开始）<br>松开时自动再点一下快捷键（停止+转写）<br><br>适合 Typeless、通义听悟这类「按一下开始/再按一下结束」的软件</div>
+        </div>
+        <div class="mode-card" data-mode="hold">
+          <div class="m-title">按住说话·按键式</div>
+          <div class="m-desc">按住语音键 = 快捷键一直按着<br>松开语音键 = 松开快捷键<br><br>适合「按住快捷键说话」的输入法（豆包/微信输入法）</div>
+        </div>
+      </div>
+      <div class="row" id="voice-target-row">
+        <div>
+          <div class="label">快捷键用哪个键？</div>
+          <div class="hint">必须和目标软件里设置的快捷键一致。默认 F2；也支持左/右 Ctrl、Shift、Alt（输入法对两侧定义不同）。</div>
+        </div>
+        <select id="voice-target"></select>
+      </div>
+      <div class="capture-box" id="voice-capture" tabindex="0">
+        <div class="capture-hint" id="voice-capture-hint">或点击这里直接按键捕获：单独按住左/右 Ctrl、Shift、Alt 后松开即捕获该键；组合键则按住修饰键再按一个键</div>
+        <div class="capture-value" id="voice-captured">未捕获</div>
+      </div>
+      <div class="row" id="voice-cycle-row">
+        <div>
+          <div class="label">临时切换模式</div>
+          <div class="hint" id="voice-cycle-hint">不动快捷键，一键在「点按两下」和「按住说话」之间切换。当前：<b id="voice-cycle-current">点按两下</b></div>
+        </div>
+        <button class="secondary" id="btn-cycle-voice">切换模式</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== 设置 ==================== -->
+  <section class="page" id="page-settings">
+    <div class="card">
+      <h2>关于</h2>
+      <div class="sub">OpenRemoteAssistant Windows 移植版 0.3.0</div>
+      <div class="row">
+        <div>
+          <div class="label">上游项目</div>
+          <div class="hint">ru-gong/OpenRemoteAssistant（GPL-3.0-only）· 协议与解码逻辑移植自其 macOS 源码</div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">隐私</div>
+          <div class="hint">录音仅保存在本机；无遥测、无上传、无后台服务</div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">支持设备</div>
+          <div class="hint">小米蓝牙遥控器 2 Pro（RC003-MS）· 固件 2671 / 软件 A.7.0.6</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-icon" id="modal-icon">⚠️</div>
+    <div class="modal-title" id="modal-title">确认操作</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="secondary" id="modal-cancel">取消</button>
+      <button class="danger" id="modal-ok">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============ host bridge ============
+const host = window.chrome?.webview;
+function send(type, payload = {}) {
+  return new Promise((resolve, reject) => {
+    if (!host) { resolve(null); return; }   // design-time fallback
+    const timer = setTimeout(() => reject(new Error(type + " 超时")), 30000);
+    const handler = (event) => {
+      const msg = event.data;
+      if (msg?.type === type + ":reply") {
+        clearTimeout(timer); host.removeEventListener("message", handler);
+        // Reply arrives as {type, data:{ok, data|error}} — ok/error live inside data.
+        const body = msg.data ?? {};
+        body.ok ? resolve(body.data) : reject(new Error(body.error ?? "未知错误"));
+      }
+    };
+    host.addEventListener("message", handler);
+    host.postMessage({ type, ...payload });
+  });
+}
+function toast(text) {
+  const el = document.getElementById("toast");
+  el.textContent = text; el.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 2400);
+}
+</script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+dist/
+release/
+
+# Inno Setup output
+installer/installer/
+
+# IDE / user files
+.vs/
+*.user
+*.suo
+*.log

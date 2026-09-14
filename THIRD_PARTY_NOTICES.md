@@ -1,5 +1,10 @@
 # Third-party notices
 
+Windows 0.3.0 adds a separate C# application under `apps/windows/`. Its runtime
+contents and full component licenses are in [Windows notices](apps/windows/THIRD_PARTY_NOTICES.md).
+The CoreAudio driver, Apple frameworks and Mac-specific descriptions below
+remain scoped to the Mac application. Windows does not bundle that driver.
+
 ## Application protocol lineage
 
 ATVV control handling and high-nibble-first IMA ADPCM decoding were adapted

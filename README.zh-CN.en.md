@@ -1,5 +1,8 @@
 # 小米蓝牙遥控器 2 Pro 助手 / OpenRemoteAssistant
 
+本文为 **Mac 版**说明。Windows 用户请看 [Windows 中文 / English 指南](apps/windows/README.md)。
+This guide covers **macOS**. See the [Windows guide](apps/windows/README.md) for Windows.
+
 ## 中文
 
 OpenRemoteAssistant 把**小米蓝牙遥控器 2 Pro** 的按键和麦克风接入 Mac，适用于语音输入、语音编程和 **web coding**。当前仅支持并验证 **RC003-MS**（设备自报 RC003）。程序不做语音转文字，不保存或上传录音。
