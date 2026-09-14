@@ -11,6 +11,7 @@ public class HidIdentityTests
     [InlineData(@"\\?\HID#DEV_VID&012717_PID&32B8_REV&00A4_020000000001#{guid}")]
     [InlineData(@"\\?\hid#dev_vid&012717_pid&32b8_rev&00a4_020000000002#{guid}")]
     [InlineData(@"HID\VID_2717&PID_32B8")]
+    [InlineData(@"\\?\HID#{00001812-0000-1000-8000-00805f9b34fb}_Dev_VID&012717_PID&32B8_REV&00A4_020000000003&Col01#8&abc")]
     public void MatchesSupportedVidPidRegardlessOfRemoteAddress(string path)
         => Assert.True(RemoteHidDevices.IsRemotePath(path));
 

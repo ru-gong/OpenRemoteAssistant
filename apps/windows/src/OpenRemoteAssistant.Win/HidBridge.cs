@@ -52,7 +52,7 @@ public static class RemoteHidDevices
     // separators differ and the VID has a two-digit vendor-source prefix.
     // Match a complete VID/PID pair; never identify hardware by a fixed MAC.
     private static readonly Regex VidPidPattern = new(
-        @"(?:^|[\\#&])(?:dev_)?vid[&_](?:0[12])?([0-9a-f]{4})[&_]+pid[&_]([0-9a-f]{4})(?=$|[\\#&_])",
+        @"(?:^|[\\#&_])(?:dev_)?vid[&_](?:0[12])?([0-9a-f]{4})[&_]+pid[&_]([0-9a-f]{4})(?=$|[\\#&_])",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static bool IsRemotePath(string? devicePath)
