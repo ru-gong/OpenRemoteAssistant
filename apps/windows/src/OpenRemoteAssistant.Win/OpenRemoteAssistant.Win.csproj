@@ -27,6 +27,7 @@
     <RepositoryType>git</RepositoryType>
     <DebugType>none</DebugType>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <WindowsSdkPackageVersion>10.0.19041.57</WindowsSdkPackageVersion>
   </PropertyGroup>
 
   <ItemGroup>

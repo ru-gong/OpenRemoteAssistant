@@ -15,7 +15,7 @@ switch ($Action) {
         $destination = Join-Path $PSScriptRoot 'dist'
         & $Dotnet publish $project -c Release -r win-x64 --self-contained true `
             -p:PublishSingleFile=true -p:PublishTrimmed=false `
-            -p:IncludeNativeLibrariesForSelfExtract=true -p:RuntimeFrameworkVersion=9.0.8 -o $destination
+            -p:IncludeNativeLibrariesForSelfExtract=true -o $destination
         if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         foreach ($name in @('README.md', 'LICENSE', 'COPYRIGHT', 'THIRD_PARTY_NOTICES.md', 'licenses', 'docs')) {
             Copy-Item (Join-Path $PSScriptRoot $name) $destination -Recurse -Force

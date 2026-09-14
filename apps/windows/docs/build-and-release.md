@@ -2,7 +2,7 @@
 
 ## Build on Windows / 在 Windows 构建
 
-Install a .NET 9 SDK and use PowerShell in `apps/windows`:
+Install the .NET 9.0.304 SDK and use PowerShell in `apps/windows`:
 
 ```powershell
 .\build.ps1 test
@@ -17,7 +17,7 @@ policy; equivalent `dotnet build`, `dotnet test` and `dotnet publish` commands
 are visible in the scripts.
 
 The supplied binary uses .NET / WindowsDesktop runtime **9.0.8**; publish
-scripts pin that version for source correspondence. This is not a recommendation
+`global.json` pins SDK 9.0.304 (which carries runtime 9.0.8) for source correspondence. This is not a recommendation
 to stay on an old runtime for future versions. Dependencies are defined in
 the project files and detailed in `THIRD_PARTY_NOTICES.md`. Exact byte-for-byte
 reproduction is not claimed: SDK version, paths and embedded debug data can differ.

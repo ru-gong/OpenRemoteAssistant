@@ -18,7 +18,7 @@ case "${1:-build}" in
     "$dotnet_cmd" publish "$win_root\src\OpenRemoteAssistant.Win\OpenRemoteAssistant.Win.csproj" \
       -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true \
       -p:PublishTrimmed=false -p:IncludeNativeLibrariesForSelfExtract=true \
-      -p:RuntimeFrameworkVersion=9.0.8 -o "$win_root\dist"
+      -o "$win_root\dist"
     for doc in README.md LICENSE COPYRIGHT THIRD_PARTY_NOTICES.md; do
       cp "$source_root/$doc" "$source_root/dist/$doc"
     done
