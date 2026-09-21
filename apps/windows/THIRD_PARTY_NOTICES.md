@@ -1,6 +1,6 @@
 # Windows third-party notices / Windows 第三方声明
 
-Windows 0.3.0 is a GPL-3.0-only port of OpenRemoteAssistant. Runtime dependency
+Windows 0.3.1 is a GPL-3.0-only port of OpenRemoteAssistant. Runtime dependency
 versions below were read from the supplied EXE's embedded `.deps.json` and
 `.runtimeconfig.json`. These components are not relicensed under GPL by this
 notice; their own notices and terms are retained in `licenses/` and below.
@@ -22,15 +22,43 @@ is produced by Inno Setup 6; see [Inno Setup licensing](https://jrsoftware.org/f
 
 The **WebView2 browser runtime** must already be installed or obtained separately
 from Microsoft; this release includes the SDK controls/loader, not an Edge
-browser installer. **VB-CABLE is not bundled**; users obtain it under its own
-terms. **OpenRemoteAudio / BlackHole and Apple frameworks are Mac-only** and are
+browser installer. **VB-CABLE Driver Pack45 is bundled unchanged**, as optional
+third-party software under VB-Audio terms, not GPL (see below). **OpenRemoteAudio / BlackHole and Apple frameworks are Mac-only** and are
 not in the Windows EXE or setup. Neither upstream Windows binaries nor upstream
 product photographs are included.
 
-Windows build 18w is rebuilt from the public source and contains the corrected
+Windows build 21w is rebuilt from the public source and contains the corrected
 HID matching rules. Full license materials are included in the installer and
 portable ZIP. Keep the whole bundle together when redistributing. Matching application source and build/install
 scripts are provided in the source asset at the same release tag.
+
+## Optional VB-CABLE / 可选虚拟声卡
+
+VB-CABLE is provided by Vincent Burel / VB-Audio at
+https://vb-audio.com/Cable/ (also https://www.vb-cable.com/).
+It is **donationware**, under the vendor's own terms, not GPL. Users who find
+it useful are encouraged to donate/pay for a license on the vendor's website.
+VB-CABLE remains visibly identified in the application, including after
+installation, with a button opening the official website. Driver installation
+is optional and requires user confirmation and Windows administrator approval;
+the assistant does not automatically install a driver or reboot the system.
+
+On 2026-09-21, the official [distribution rules](https://vb-audio.com/Services/licensing.htm)
+under “VB-CABLE Distribution with other product” allow the standard VB-CABLE
+package to accompany an application, including installation integration, when
+the end user can identify VB-Audio and is able to donate/pay under its model.
+Professional deployments where employees cannot identify/pay the vendor have
+separate volume-license conditions. No rights are claimed for VB-CABLE A+B or
+C+D; neither is included. This release is a public end-user distribution, not
+a blanket commercial/enterprise sublicense. Consult the vendor for other use cases.
+
+All 31 bundled vendor files match the official Driver Pack45 ZIP byte-for-byte.
+The original `vbcable/readme.txt`, binaries, catalogs and INF files are unchanged.
+The exact URL, archive SHA-256 and individual hashes are in
+[licenses/VBCABLE-PROVENANCE.json](licenses/VBCABLE-PROVENANCE.json).
+The package readme has older wording concerning integration approval; the
+current public vendor distribution policy above is recorded as the basis for
+this publication. No claim of private written approval is made.
 
 ## Retained project lineage (Mac-specific descriptions are historical)
 
@@ -144,8 +172,9 @@ photo locally; its rights remain with its owner. No user photo, diagnostic
 recording, private configuration, screen capture or actual pairing identity
 is included in the source or installer payload.
 
-This product does not include Sparkle, Qt/PySide, Frida, VB-CABLE, the upstream
-Windows application or its photo. Notices for those unused upstream
+The Mac product does not include Sparkle, Qt/PySide, Frida, VB-CABLE, the upstream
+Windows application or its photo. Windows 0.3.1 includes the optional standard
+VB-CABLE package under its separate vendor terms described in the Windows notices. Notices for those unused upstream
 components do not represent this product's contents.
 
 ## Corresponding source

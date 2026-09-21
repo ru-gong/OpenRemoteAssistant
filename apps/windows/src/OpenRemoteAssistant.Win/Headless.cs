@@ -20,11 +20,13 @@ public static class Headless
                 return 0;
             case "--device-check":
                 return RunDeviceCheck().GetAwaiter().GetResult();
+            case "--audio-check":
+                return RunAudioCheck(args.Length > 1 ? args[1] : null);
             case "--voice-listen":
                 return RunVoiceListen(args.Length > 1 ? args[1] : null).GetAwaiter().GetResult();
             default:
                 Console.Error.WriteLine($"未知参数：{args[0]}");
-                Console.Error.WriteLine("用法：OpenRemoteAssistantWin.exe [--device-check | --voice-listen [目录] | --version]");
+                Console.Error.WriteLine("用法：OpenRemoteAssistantWin.exe [--device-check | --audio-check [输出设备名] | --voice-listen [目录] | --version]");
                 return 2;
         }
     }
@@ -68,6 +70,59 @@ public static class Headless
         await service.DisableAsync();
         service.Dispose();
         return result;
+    }
+
+    /// <summary>
+    /// Audio path self-check without the GUI. Without an argument it reads the
+    /// device stored in settings.json, so a support call is literally "run this
+    /// with the same exe and send us the output". Exit code 0 only when the
+    /// loopback test passed.
+    /// </summary>
+    private static int RunAudioCheck(string? deviceName)
+    {
+        // Fall back to the persisted selection when no argument is given.
+        if (string.IsNullOrWhiteSpace(deviceName))
+        {
+            try
+            {
+                var settings = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "OpenRemoteAssistant", "settings.json");
+                if (File.Exists(settings))
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(settings));
+                    if (doc.RootElement.TryGetProperty("playbackDevice", out var d)
+                        && d.ValueKind == System.Text.Json.JsonValueKind.String)
+                        deviceName = d.GetString();
+                }
+            }
+            catch { }
+        }
+
+        AudioCheckResult result;
+        try
+        {
+            result = AudioCheck.Run(deviceName);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[失败] 自检异常：{ex}");
+            return 2;
+        }
+
+        Console.WriteLine(result.Report);
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "OpenRemoteAssistant", "音频自检报告.txt");
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, result.Report, new System.Text.UTF8Encoding(true));
+            Console.WriteLine($"报告已保存：{path}");
+        }
+        catch { }
+        Console.WriteLine(result.Passed ? "自检通过。" : "自检未通过。");
+        return result.Passed ? 0 : 1;
     }
 
     /// <summary>

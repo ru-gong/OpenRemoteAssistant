@@ -14,7 +14,7 @@ dist = root / "dist"
 release = root / "release"
 release.mkdir(exist_ok=True)
 exe = dist / "OpenRemoteAssistantWin.exe"
-setup = root / "installer/installer/OpenRemoteAssistant-0.3.0-setup.exe"
+setup = root / "installer/installer/OpenRemoteAssistant-0.3.1-setup.exe"
 assert exe.is_file() and setup.is_file(), "Build the application and installer first"
 
 def digest(path):
@@ -36,6 +36,12 @@ verify_pe(setup)  # Inno's setup bootstrapper can be 32-bit for an x64 payload.
 docs = [root / name for name in ("README.md", "LICENSE", "COPYRIGHT", "THIRD_PARTY_NOTICES.md")]
 docs += sorted(p for name in ("licenses", "docs") for p in (root / name).rglob("*") if p.is_file())
 ui = [dist / "wwwroot/app.js", dist / "wwwroot/index.html"]
+vendor_manifest = json.loads((root / "licenses/VBCABLE-PROVENANCE.json").read_text())
+vendor = sorted((dist / "vbcable").glob("*"))
+assert {p.name for p in vendor} == set(vendor_manifest["files"])
+for item in vendor:
+    assert item.is_file() and not item.is_symlink()
+    assert digest(item) == vendor_manifest["files"][item.name], item
 for path in docs + ui:
     assert path.is_file(), path
     assert not path.is_symlink(), path
@@ -45,7 +51,7 @@ def make_zip(name, prefix, payload, with_ui=False):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         z.write(payload, prefix + "/" + ("OpenRemoteAssistantWin.exe" if with_ui else "setup.exe"))
         if with_ui:
-            for item in ui:
+            for item in ui + vendor:
                 z.write(item, prefix + "/" + item.relative_to(dist).as_posix())
         for item in docs:
             z.write(item, prefix + "/" + item.relative_to(root).as_posix())
@@ -56,14 +62,15 @@ def make_zip(name, prefix, payload, with_ui=False):
     return path
 
 archives = [
-    make_zip("OpenRemoteAssistant-0.3.0-setup-bundle.zip", "OpenRemoteAssistant-0.3.0-setup", setup),
-    make_zip("OpenRemoteAssistant-0.3.0-win-x64.zip", "OpenRemoteAssistant-0.3.0-win-x64", exe, True),
+    make_zip("OpenRemoteAssistant-0.3.1-setup-bundle.zip", "OpenRemoteAssistant-0.3.1-setup", setup),
+    make_zip("OpenRemoteAssistant-0.3.1-win-x64.zip", "OpenRemoteAssistant-0.3.1-win-x64", exe, True),
 ]
 manifest = {
-    "version": "0.3.0", "build": "18w", "commit": os.environ.get("GITHUB_SHA"),
+    "version": "0.3.1", "build": "21w", "commit": os.environ.get("GITHUB_SHA"),
     "platform": "win-x64", "authenticode": "unsigned",
     "application_sha256": digest(exe), "installer_sha256": digest(setup),
     "assets": {p.name: digest(p) for p in archives},
+    "vbcable_archive_sha256": vendor_manifest["archive_sha256"],
     "hardware_acceptance": "not performed by CI",
 }
 (release / "BUILD-MANIFEST.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

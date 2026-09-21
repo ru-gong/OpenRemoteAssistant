@@ -14,10 +14,10 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
-    <Version>0.3.0</Version>
-    <FileVersion>0.3.0.18</FileVersion>
-    <AssemblyVersion>0.3.0.18</AssemblyVersion>
-    <InformationalVersion>0.3.0-windows-port</InformationalVersion>
+    <Version>0.3.1</Version>
+    <FileVersion>0.3.1.21</FileVersion>
+    <AssemblyVersion>0.3.1.21</AssemblyVersion>
+    <InformationalVersion>0.3.1-windows-port</InformationalVersion>
     <Company>OpenRemoteAssistant contributors</Company>
     <Product>OpenRemoteAssistant Windows Port</Product>
     <Description>Windows port of OpenRemoteAssistant for the Xiaomi RC003-MS Bluetooth remote</Description>
@@ -37,6 +37,7 @@
 
   <ItemGroup>
     <None Include="wwwroot\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="vbcable\**\*" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
 </Project>

@@ -3,7 +3,7 @@
 
 #define MyAppName "遥控器助手"
 #define MyAppNameEn "OpenRemoteAssistant"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.3.1"
 #define MyAppPublisher "OpenRemoteAssistant contributors"
 #define MyAppURL "https://github.com/ru-gong/OpenRemoteAssistant"
 #define MyAppExeName "OpenRemoteAssistantWin.exe"
@@ -12,7 +12,7 @@
 AppId={{7A3C1D9E-4F2B-4E8A-9C6D-1B5A0E8F3D42}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-VersionInfoVersion={#MyAppVersion}.18
+VersionInfoVersion={#MyAppVersion}.21
 AppVerName={#MyAppName} {#MyAppVersion}（Windows 版）
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
@@ -57,6 +57,8 @@ Source: "..\dist\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\dist\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\dist\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\dist\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+Source: "..\dist\vbcable\*"; DestDir: "{app}\vbcable"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

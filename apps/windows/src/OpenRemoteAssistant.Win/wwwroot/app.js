@@ -45,6 +45,14 @@ function log(text) {
   logBox.scrollTop = logBox.scrollHeight;
 }
 
+// Device names come from the OS and are interpolated into HTML hints, so escape
+// before embedding rather than trusting a driver's idea of a friendly name.
+function esc(text) {
+  return String(text ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
 // ---------- state ----------
 const state = {
   bound: null,
@@ -55,6 +63,8 @@ const state = {
   voiceMode: "toggle",   // voice shortcut is always on; only the mode varies
   voiceTarget: null,
   cableInstalled: false,
+  cableDriverPresent: false,   // driver registered but endpoint pending a reboot
+  selectedIsVirtual: false,    // output points at a virtual cable, not a speaker
   buttons: {},
 };
 
@@ -494,27 +504,149 @@ async function loadOutputDevices() {
     const d = await send("list-output-devices");
     if (!d) return;
     state.cableInstalled = !!d.cableInstalled;
+    state.cableDriverPresent = !!d.cableDriverPresent;
+    state.selectedIsVirtual = !!d.selectedIsVirtual;
     const sel = $("#output-device");
-    if (!sel) return;
-    sel.innerHTML = "";
-    sel.append(new Option("系统默认输出", ""));
-    (d.devices || []).forEach((dev) => sel.append(new Option(dev.name, dev.name)));
-    if (d.selected) sel.value = d.selected;
+    if (sel) {
+      sel.innerHTML = "";
+      sel.append(new Option("系统默认输出", ""));
+      (d.devices || []).forEach((dev) =>
+        sel.append(new Option(dev.isVirtual ? dev.name + "（虚拟声卡）" : dev.name, dev.name))
+      );
+      if (d.selected) sel.value = d.selected;
+    }
     const hint = $("#cable-hint");
     if (hint) {
-      hint.innerHTML = state.cableInstalled
-        ? "✅ 已检测到虚拟声卡（CABLE）。在语音软件的麦克风里选 <b>CABLE Output</b>，这里把输出选 <b>CABLE Input</b> 即可打通。"
-        : "未检测到虚拟声卡。要让语音软件用遥控器的麦克风，请安装 VB-Audio Virtual Cable（见下方按钮）。";
-      hint.style.color = state.cableInstalled ? "var(--ok, #0d7a3d)" : "#b35900";
+      // Ordered by how often each case actually bites: no cable at all, a cable
+      // that exists while the output points elsewhere (the silent killer), and
+      // a working setup.
+      if (!state.cableInstalled) {
+        hint.innerHTML = "未检测到虚拟声卡。要让语音软件把遥控器麦克风当成输入设备，需要先安装 VB-Audio Virtual Cable。";
+        hint.style.color = "#b35900";
+      } else if (!state.playback) {
+        hint.innerHTML = "已检测到虚拟声卡。打开上方「实时回放」，并把这里选成带「（虚拟声卡）」的那一项，语音软件再从 <b>CABLE Output</b> 录音即可。";
+        hint.style.color = "";
+      } else if (!d.selected) {
+        hint.innerHTML = "回放已打开，但输出还是<b>系统默认</b>——声音会从扬声器出来，虚拟声卡这一路全静音，语音软件自然听不到。请在上面选带「（虚拟声卡）」的那一项。";
+        hint.style.color = "#b35900";
+      } else if (!state.selectedIsVirtual) {
+        hint.innerHTML = `回放已打开，但输出选的是「${esc(d.selected)}」这个<b>真实设备</b>，声音不会进入虚拟声卡。请改选带「（虚拟声卡）」的那一项。`;
+        hint.style.color = "#b35900";
+      } else {
+        hint.innerHTML = `✅ ${esc(d.resolution || "")} 语音软件的麦克风请选 <b>CABLE Output</b>。`;
+        hint.style.color = "var(--ok, #0d7a3d)";
+      }
     }
+    renderCableRow();
   } catch (e) { /* non-fatal */ }
 }
+
+// Virtual sound card row. Only a missing driver offers the install button; a
+// driver that is registered but not live yet needs a reboot hint instead, and
+// a working cable needs no call to action at all.
+function renderCableRow() {
+  const row = $("#cable-row");
+  const status = $("#cable-status");
+  const btn = $("#btn-install-cable");
+  if (!row) return;
+  if (state.cableInstalled) { row.style.display = "none"; return; }
+  row.style.display = "flex";
+  if (state.cableDriverPresent) {
+    if (status) {
+      status.innerHTML = "驱动已安装，需要<b>重启电脑</b>后才会出现 CABLE 设备。";
+      status.style.color = "#b35900";
+    }
+    if (btn) btn.style.display = "none";
+  } else {
+    if (status) {
+      status.innerHTML = "未安装。装好后需重启电脑，语音软件才能把遥控器麦克风当成输入设备。";
+      status.style.color = "";
+    }
+    if (btn) { btn.style.display = ""; btn.disabled = false; btn.textContent = "安装虚拟声卡"; }
+  }
+}
+
+// Three layers of "waiting": the installer writes the driver entry a few seconds
+// after the UAC prompt is accepted, so poll briefly instead of guessing.
+let cablePollTimer = null;
+function watchCableInstall() {
+  clearInterval(cablePollTimer);
+  let ticks = 0;
+  cablePollTimer = setInterval(async () => {
+    ticks++;
+    await loadOutputDevices();
+    if (state.cableInstalled || state.cableDriverPresent) {
+      clearInterval(cablePollTimer);
+      toast("虚拟声卡已安装，重启电脑后生效");
+    } else if (ticks >= 40) {
+      clearInterval(cablePollTimer);
+    }
+  }, 3000);
+}
+
+$("#btn-cable-website")?.addEventListener("click", async () => {
+  try { await send("open-cable-website"); } catch (err) { toast(err.message); }
+});
+$("#btn-install-cable")?.addEventListener("click", async () => {
+  if (!window.confirm("将安装 VB-Audio 的 VB-CABLE 虚拟声卡（独立的 donationware 软件）。需要管理员授权，可能需要重启；本程序不会自动重启电脑。来源：https://vb-audio.com/Cable/ 。欢迎支持作者。现在继续安装？")) return;
+  const btn = $("#btn-install-cable");
+  const status = $("#cable-status");
+  btn.disabled = true;
+  btn.textContent = "安装中…";
+  if (status) {
+    status.innerHTML = "已启动安装程序，请在管理员授权弹窗中选择「是」。安装期间该窗口可能短暂无响应，属正常现象。";
+    status.style.color = "";
+  }
+  try {
+    const r = await send("install-virtual-cable");
+    toast(r?.message || "安装程序已启动");
+    if (r?.launched) watchCableInstall();
+    else if (status) status.textContent = r?.message || "安装未启动。";
+  } catch (e) {
+    toast("安装失败：" + e.message);
+    if (status) { status.textContent = "安装未启动：" + e.message; status.style.color = "#b35900"; }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "重新安装";
+  }
+});
 
 $("#output-device")?.addEventListener("change", async (e) => {
   try {
     await send("set-output-device", { name: e.target.value || null });
+    await loadOutputDevices();
     toast(e.target.value ? "回放输出已设为 " + e.target.value : "回放输出已设为系统默认");
   } catch (err) { toast("设置失败：" + err.message); }
+});
+
+// Audio path self-check. The report is long, so the verdict goes in the status
+// line while the full text lands in the log and in a file the user can send us.
+$("#btn-audio-check")?.addEventListener("click", async () => {
+  if (!window.confirm("自检将向当前输出发送约 1.2 秒测试音，并检测录制端点信号；可能从扬声器发声。请先结束会议、播放和录音，再继续。")) return;
+  const btn = $("#btn-audio-check");
+  const status = $("#audio-check-status");
+  btn.disabled = true;
+  btn.textContent = "自检中…";
+  if (status) {
+    status.textContent = "正在送出测试音并从虚拟声卡录回来，约 4 秒。若输出选的是真实扬声器，会听到一声短促的「嘀」。";
+    status.style.color = "";
+  }
+  try {
+    const r = await send("audio-check");
+    if (status) {
+      status.innerHTML = esc(r?.verdict || "自检未返回结果。")
+        + (r?.path ? `<br><span style="opacity:.7">完整报告：${esc(r.path)}</span>` : "");
+      status.style.color = r?.passed ? "var(--ok, #0d7a3d)" : "#b35900";
+    }
+    if (r?.report) log("===== 音频自检报告 =====\n" + r.report);
+    toast(r?.passed ? "音频链路正常" : "自检发现问题，详见下方日志");
+  } catch (err) {
+    if (status) { status.textContent = "自检失败：" + err.message; status.style.color = "#b35900"; }
+    toast("自检失败：" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "重新自检";
+  }
 });
 $("#opt-mapping").addEventListener("change", async (e) => {
   try {
@@ -557,12 +689,18 @@ function handleHostEvent(event) {
       if (typeof d.playback === "boolean") { state.playback = d.playback; $("#opt-playback").checked = d.playback; }
       if (typeof d.record === "boolean") { state.record = d.record; $("#opt-record").checked = d.record; }
       state.cableInstalled = !!d.cableInstalled;
+      state.cableDriverPresent = !!d.cableDriverPresent;
       $("#folder-hint").textContent = d.recordingsFolder;
       renderButtons();
       renderVoiceShortcut();
       renderVoiceCycle();
       renderOutputDeviceRow();
-      if (state.playback) loadOutputDevices();
+      renderCableRow();
+      // Load the endpoint list even when playback is off: the virtual-sound-card
+      // row and the "output points at a real speaker" warning are computed from
+      // it, and those are exactly the hints someone needs before turning
+      // playback on.
+      loadOutputDevices();
       if (state.voiceTarget) setVoiceCaptured(vksLabel(state.voiceTarget));
       renderConnection();
       break;

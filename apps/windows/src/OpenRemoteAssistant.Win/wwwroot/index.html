@@ -385,7 +385,7 @@
   <div class="logo">遥</div>
   <div class="brand">
     <h1>遥控器助手 <span class="hdr-dot" id="hdr-dot"></span></h1>
-    <div class="ver">Windows 版 0.3.0 · 小米蓝牙遥控器 2 Pro（RC003-MS）</div>
+    <div class="ver">Windows 版 0.3.1 · 小米蓝牙遥控器 2 Pro（RC003-MS）</div>
   </div>
   <nav>
     <button data-page="home" class="active">主页</button>
@@ -429,6 +429,23 @@
           <div class="hint" id="cable-hint">—</div>
         </div>
         <select id="output-device" style="max-width:260px;"></select>
+      </div>
+      <div class="hint" style="padding:10px 0;">VB-CABLE 由 VB-Audio 提供，采用独立的 donationware 许可；欢迎在觉得有用时向作者捐赠或购买许可。
+        <button class="secondary" id="btn-cable-website">VB-CABLE 官网 / 支持作者</button>
+      </div>
+      <div class="row" id="cable-row" style="display:none;">
+        <div>
+          <div class="label">虚拟声卡</div>
+          <div class="hint" id="cable-status">—</div>
+        </div>
+        <button class="primary" id="btn-install-cable">安装虚拟声卡</button>
+      </div>
+      <div class="row">
+        <div>
+          <div class="label">音频链路自检</div>
+          <div class="hint" id="audio-check-status">送出一段测试音并从虚拟声卡录回来，直接判定音频断在哪一环。需要对方配合排查时先跑这个。</div>
+        </div>
+        <button class="secondary" id="btn-audio-check" style="white-space:nowrap;flex:0 0 auto;">开始自检</button>
       </div>
       <div class="row">
         <div>
@@ -597,7 +614,7 @@
   <section class="page" id="page-settings">
     <div class="card">
       <h2>关于</h2>
-      <div class="sub">OpenRemoteAssistant Windows 移植版 0.3.0</div>
+      <div class="sub">OpenRemoteAssistant Windows 移植版 0.3.1</div>
       <div class="row">
         <div>
           <div class="label">上游项目</div>

@@ -1,9 +1,10 @@
 # Third-party notices
 
-Windows 0.3.0 adds a separate C# application under `apps/windows/`. Its runtime
+Windows 0.3.1 includes a separate C# application under `apps/windows/`. Its runtime
 contents and full component licenses are in [Windows notices](apps/windows/THIRD_PARTY_NOTICES.md).
 The CoreAudio driver, Apple frameworks and Mac-specific descriptions below
-remain scoped to the Mac application. Windows does not bundle that driver.
+remain scoped to the Mac application. Windows does not bundle that CoreAudio driver; its optional VB-CABLE package
+is distributed separately under VB-Audio terms described in the Windows notices.
 
 ## Application protocol lineage
 
@@ -111,8 +112,9 @@ photo locally; its rights remain with its owner. No user photo, diagnostic
 recording, private configuration, screen capture or actual pairing identity
 is included in the source or installer payload.
 
-This product does not include Sparkle, Qt/PySide, Frida, VB-CABLE, the upstream
-Windows application or its photo. Notices for those unused upstream
+The Mac product does not include Sparkle, Qt/PySide, Frida, VB-CABLE, the upstream
+Windows application or its photo. Windows 0.3.1 includes the optional standard
+VB-CABLE package under its separate vendor terms described in the Windows notices. Notices for those unused upstream
 components do not represent this product's contents.
 
 ## Corresponding source

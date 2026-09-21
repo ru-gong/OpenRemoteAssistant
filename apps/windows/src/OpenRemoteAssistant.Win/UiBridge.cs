@@ -192,6 +192,7 @@ public sealed class UiBridge : IDisposable
         ["record"] = RecordEnabled,
         ["playbackDevice"] = PlaybackOutputDevice,
         ["cableInstalled"] = IsVirtualCableInstalled(),
+        ["cableDriverPresent"] = IsCableDriverRegistered(),
         ["voiceMode"] = _mapping.VoiceMode.ToString().ToLowerInvariant(),
         ["voiceTarget"] = _mapping.VoiceTarget,
         ["recordingsFolder"] = _recordingsFolder(),
@@ -331,13 +332,47 @@ public sealed class UiBridge : IDisposable
             // Audio routing: list render endpoints, pick one (virtual cable),
             // and report whether a VB-Cable-like device exists.
             case "list-output-devices":
-                return new
                 {
-                    devices = WaveOutSink.EnumerateOutputDevices()
-                        .Select(d => new { index = d.Index, name = d.Name }).ToArray(),
-                    selected = PlaybackOutputDevice,
-                    cableInstalled = IsVirtualCableInstalled(),
-                };
+                    // isVirtual is computed here rather than in the UI: the
+                    // picker entry is the main defence against choosing a real
+                    // speaker and then wondering why nothing reaches the voice
+                    // software.
+                    var devices = WaveOutSink.EnumerateOutputDevices()
+                        .Select(d => new
+                        {
+                            index = d.Index,
+                            name = d.Name,
+                            isVirtual = LooksVirtualAudio(d.Name),
+                        })
+                        .ToArray();
+                    return new
+                    {
+                        devices,
+                        selected = PlaybackOutputDevice,
+                        selectedIsVirtual = PlaybackOutputDevice is { } sel && LooksVirtualAudio(sel),
+                        resolution = DescribeResolution(PlaybackOutputDevice),
+                        cableInstalled = IsVirtualCableInstalled(),
+                        cableDriverPresent = IsCableDriverRegistered(),
+                    };
+                }
+
+            // End-to-end audio path self-check: enumerates every endpoint with
+            // its real state, pushes a test tone through the production sink,
+            // and measures what arrives on the cable's recording endpoint.
+            case "audio-check":
+                {
+                    var result = await Task.Run(() => AudioCheck.Run(PlaybackOutputDevice));
+                    var path = WriteAudioCheckReport(result.Report);
+                    _logSink?.Invoke($"[自检] {result.Verdict}");
+                    if (path is not null) _logSink?.Invoke($"[自检] 完整报告已写入 {path}");
+                    return new
+                    {
+                        verdict = result.Verdict,
+                        passed = result.Passed,
+                        report = result.Report,
+                        path,
+                    };
+                }
 
             case "set-output-device":
                 {
@@ -347,6 +382,20 @@ public sealed class UiBridge : IDisposable
                     await RestartVoiceSessionIfActiveAsync();
                     return new { selected = PlaybackOutputDevice };
                 }
+
+            // One-click helper for the virtual sound card: launches VB-Audio's
+            // own setup (documented silent switches) so other software gets a
+            // microphone endpoint. Needs elevation, and a reboot to take effect.
+            case "open-cable-website":
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "https://vb-audio.com/Cable/",
+                    UseShellExecute = true,
+                });
+                return new { opened = true };
+
+            case "install-virtual-cable":
+                return InstallVirtualCable();
 
             case "set-recordings-folder":
                 {
@@ -397,6 +446,9 @@ public sealed class UiBridge : IDisposable
         var record = RecordEnabled;
         var folder = _recordingsFolder();
         var outDev = PlaybackOutputDevice;
+        // Log the resolution up front: if a configured device silently falls
+        // back to the speakers, this line is the only place it shows.
+        if (playback) _logSink?.Invoke($"[声卡] 回放输出：{DescribeResolution(outDev)}");
         var factory = new Func<IVoiceAudioSink>(() =>
         {
             var sinks = new List<IVoiceAudioSink>();
@@ -433,6 +485,68 @@ public sealed class UiBridge : IDisposable
         return winmmName;
     }
 
+    /// <summary>
+    /// Same fragment extraction as the playback path uses, exposed so the
+    /// self-check reports exactly what the sink will match on rather than a
+    /// re-implementation that could drift.
+    /// </summary>
+    public static string? WasapiFragmentFor(string? deviceName) => ResolveWasapiFragment(deviceName);
+
+    /// <summary>Human-readable outcome of resolving the configured device, so a
+    /// silent fall back to the speakers can never go unnoticed again.</summary>
+    private static string DescribeResolution(string? winmmName)
+    {
+        if (string.IsNullOrWhiteSpace(winmmName)) return "未指定，使用系统默认输出设备。";
+        var fragment = ResolveWasapiFragment(winmmName);
+        if (fragment is null) return "未指定，使用系统默认输出设备。";
+        try
+        {
+            using var en = new NAudio.CoreAudioApi.MMDeviceEnumerator();
+            var active = en.EnumerateAudioEndPoints(NAudio.CoreAudioApi.DataFlow.Render,
+                NAudio.CoreAudioApi.DeviceState.Active).ToList();
+            var hit = active.FirstOrDefault(d =>
+                d.FriendlyName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+            if (hit is not null) return $"已匹配到端点「{hit.FriendlyName}」。";
+            var anyState = en.EnumerateAudioEndPoints(NAudio.CoreAudioApi.DataFlow.Render,
+                NAudio.CoreAudioApi.DeviceState.All).Any(d =>
+                d.FriendlyName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+            return anyState
+                ? $"设备「{fragment}」存在但不在「在用」状态——音频会回退到系统默认设备。装完虚拟声卡通常需要重启电脑。"
+                : $"设备「{fragment}」在系统里找不到——音频会回退到系统默认设备。";
+        }
+        catch (Exception ex)
+        {
+            return $"解析失败（{ex.Message}）。";
+        }
+    }
+
+    /// <summary>
+    /// True for endpoints that are a virtual loopback cable rather than a real
+    /// speaker. Deliberately narrower than "virtual": the remote-desktop audio
+    /// device also calls itself virtual but carries no audio we can route.
+    /// </summary>
+    public static bool LooksVirtualAudio(string name) =>
+        name.Contains("CABLE", StringComparison.OrdinalIgnoreCase)
+        || name.Contains("VB-Audio", StringComparison.OrdinalIgnoreCase)
+        || name.Contains("Virtual Audio", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Persists the self-check report so a user can attach it to a
+    /// support message without digging through the log window.</summary>
+    private static string? WriteAudioCheckReport(string report)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "OpenRemoteAssistant");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "音频自检报告.txt");
+            File.WriteAllText(path, report, new System.Text.UTF8Encoding(true));
+            return path;
+        }
+        catch { return null; }
+    }
+
     /// <summary>Restarts the GATT session if it is currently enabled, so a
     /// new sink configuration takes effect without user action.</summary>
     private async Task RestartVoiceSessionIfActiveAsync()
@@ -456,6 +570,116 @@ public sealed class UiBridge : IDisposable
         WaveOutSink.EnumerateOutputDevices().Any(d =>
             d.Name.Contains("CABLE", StringComparison.OrdinalIgnoreCase)
             || d.Name.Contains("Virtual Audio", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// True when the VB-Cable driver is registered in the audio class registry
+    /// key but its render endpoint is not live yet. The vendor's installer
+    /// writes the device entry immediately, while the endpoint only appears
+    /// after a reboot — so this separates "installed, reboot pending" from
+    /// "not installed", which the winmm enumeration alone cannot tell apart.
+    /// </summary>
+    public static bool IsCableDriverRegistered()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+                @"SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}");
+            if (key is null) return false;
+            foreach (var name in key.GetSubKeyNames())
+            {
+                if (!name.StartsWith("00", StringComparison.Ordinal)) continue;
+                using var sub = key.OpenSubKey(name);
+                if (sub?.GetValue("DriverDesc") is string desc
+                    && desc.Contains("CABLE", StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    /// <summary>Finds the VB-Cable package that ships unmodified beside the
+    /// application (vbcable\VBCABLE_Setup_x64.exe).</summary>
+    private static string? LocateCableSetup()
+    {
+        var root = AppContext.BaseDirectory;
+        foreach (var candidate in new[]
+                 {
+                     Path.Combine(root, "vbcable", "VBCABLE_Setup_x64.exe"),
+                     Path.Combine(root, "VBCABLE_Setup_x64.exe"),
+                 })
+        {
+            if (File.Exists(candidate)) return candidate;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Starts VB-Audio's own setup with its documented silent switches
+    /// (-h -i) under elevation. The package is redistributed as-is; this method
+    /// only launches the vendor's installer rather than installing a driver
+    /// itself. The endpoint needs a reboot before it can be used.
+    /// </summary>
+    private object InstallVirtualCable()
+    {
+        if (IsVirtualCableInstalled())
+            return new { launched = false, registered = true, message = "已检测到虚拟声卡，无需安装。" };
+
+        var setup = LocateCableSetup();
+        if (setup is null)
+            return new { launched = false, registered = false, message = "未找到随附的虚拟声卡安装包（缺少 vbcable 目录）。" };
+
+        var psi = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = setup,
+            Arguments = "-h -i",
+            WorkingDirectory = Path.GetDirectoryName(setup)!,
+            UseShellExecute = true,
+            Verb = "runas", // elevation — a UAC prompt is expected
+        };
+
+        try
+        {
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+        {
+            return new { launched = false, registered = false, message = "已取消管理员授权，虚拟声卡未安装。" };
+        }
+        catch (Exception ex)
+        {
+            return new { launched = false, registered = false, message = $"无法启动安装程序：{ex.Message}" };
+        }
+
+        _logSink?.Invoke("[声卡] 已启动 VB-Cable 静默安装；完成后必须重启电脑才会出现 CABLE 设备。");
+
+        // The installer takes tens of seconds and the UI bridge times out at
+        // 30 s, so this returns immediately and lets the front-end poll
+        // list-output-devices for the registry entry. This watcher only logs.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                for (int i = 0; i < 180; i++)
+                {
+                    await Task.Delay(1000);
+                    if (IsCableDriverRegistered() || IsVirtualCableInstalled())
+                    {
+                        _logSink?.Invoke("[声卡] 虚拟声卡已安装，重启电脑后生效。");
+                        return;
+                    }
+                }
+                _logSink?.Invoke("[声卡] 安装程序已结束，但未检测到驱动；请确认在管理员授权弹窗中选择了「是」。");
+            }
+            catch { }
+        });
+
+        return new
+        {
+            launched = true,
+            message = "安装程序已启动，请在管理员授权弹窗中选择「是」；装好后需要重启电脑。",
+        };
+    }
 
     private void LoadSettings()
     {

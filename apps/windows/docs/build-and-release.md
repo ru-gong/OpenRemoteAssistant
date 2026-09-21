@@ -1,81 +1,57 @@
-# Windows 0.3.0 build and release / 构建与发布
+# Windows 0.3.1 build and release / 构建与发布
 
-## Build on Windows / 在 Windows 构建
+## Build / 构建
 
-Install the .NET 9.0.304 SDK and use PowerShell in `apps/windows`:
+Use Windows x64 with .NET SDK **9.0.304** (`global.json`) and Inno Setup 6.
+From `apps/windows`, run `./build.ps1 test -Configuration Release`, then
+`./build.ps1 publish`, then compile `installer/setup.iss` using ISCC.exe.
+Git Bash equivalents are `bash build.sh test` and `bash build.sh publish`.
+Run `python scripts/package-release.py` to produce installer and portable ZIPs.
+Do not disable system execution-policy protections; use your permitted shell.
 
-```powershell
-.\build.ps1 test
-.\build.ps1 publish
-```
+The SDK/runtime pin preserves .NET 9.0.8 and the existing dependencies; it is
+not a recommendation to keep an old runtime in future releases. Dependencies
+and full licenses are listed in ../THIRD_PARTY_NOTICES.md. WebView2 Runtime
+is a separately installed prerequisite; .NET is bundled.
 
-Git Bash users can run `bash build.sh test` / `bash build.sh publish`.
-Use `-Dotnet <path>` in PowerShell or `DOTNET_EXECUTABLE` in Git Bash for a
-portable SDK. No user-specific profile or NuGet cache path is required.
-Scripts do not change PowerShell execution policy. Follow your organization's
-policy; equivalent `dotnet build`, `dotnet test` and `dotnet publish` commands
-are visible in the scripts.
+## Version and provenance / 版本与来源
 
-The supplied binary uses .NET / WindowsDesktop runtime **9.0.8**; publish
-`global.json` pins SDK 9.0.304 (which carries runtime 9.0.8) for source correspondence. This is not a recommendation
-to stay on an old runtime for future versions. Dependencies are defined in
-the project files and detailed in `THIRD_PARTY_NOTICES.md`. Exact byte-for-byte
-reproduction is not claimed: SDK version, paths and embedded debug data can differ.
+The supplied Windows package is **0.3.1 build 20w**. Public distribution is
+**0.3.1 build 21w**, file version **0.3.1.21**, rebuilt from the tagged source.
+Original input files are preserved locally and not uploaded unchanged.
 
-`dist` must contain the EXE, `wwwroot`, README, LICENSE, COPYRIGHT and notices.
-Keep `licenses` and `docs` with redistributed bundles. Inno Setup 6 plus its
-`ChineseSimplified.isl` language file is needed to compile `installer/setup.iss`.
-The installer script includes full component licenses and the user guide.
-Distribute the resulting installer with the full notice materials.
-Its default output is `installer/installer`. No driver is compiled or bundled.
+- Merge the supplied audio self-check, routing diagnostics and optional driver installer.
+- Keep the generic VID/PID parsing, synthetic test identities, portable build
+  scripts and no embedded application PDB from the previously published 0.3.0.
+- Preserve the 31 official VB-CABLE Pack45 files unchanged. Packaging and CI
+  verify their hashes against `licenses/VBCABLE-PROVENANCE.json`.
+- Add permanent VB-Audio / donationware attribution and an official-site
+  button. Ask explicitly before launching the vendor installer or a test tone.
+- Bundle full third-party notices in both the installer and portable archive.
 
-## Release verification / 发布核验
+The installer copies the optional driver package, but **does not run it**.
+Application uninstall removes its bundled files, not any independently installed
+system driver. Driver installation/uninstallation follows VB-Audio's procedure;
+it can require administrator approval and a reboot. The assistant does not
+reboot the computer. Mac 0.2.10 runtime code is unchanged.
 
-The Windows port was supplied as version **0.3.0, build 17w**. The installer
-PE version is 0.3.0.0; the application project file version is 0.3.0.17.
+## Validation scope / 验证范围
 
-**Developer handoff reports** (not independently rerun on this Mac):
+The developer handoff reports 38 tests, version/integrity checks and an
+install/upgrade/uninstall check on Windows 10 for build 20w. Audio feature
+checks were reported for the preceding development build 19w. These reports
+are not a hardware acceptance of rebuilt public build 21w.
 
-- Windows 10 x64 build 19045, RC003-MS / RC003, firmware 2671.
-- 38/38 unit tests; application version check; portable GUI startup.
-- Silent per-user install, installed version check, and uninstall.
-- ATVV audio recording/playback and configurable shortcuts exercised.
+The public Windows CI checks unit tests, standalone version, Inno compilation,
+installed EXE and vendor-file hashes, included licenses, and uninstall. It
+never installs the optional VB-CABLE system driver, changes audio defaults or
+connects a physical remote. See the release page's CI link for the actual run
+result. Windows 11, physical audio, interactive clean installation and all
+speech input apps remain unverified for build 21w.
 
-**Original build 17w inspection, 2026-09-14 (before publication fixes):**
-
-- All seven supplied SHA-256 manifest entries matched.
-- Inspected portable archive and .NET single-file bundle without executing them.
-- All 17 application C# files matched the source hashes in the embedded portable
-  PDB; generated build files are not included in that count. Front-end files
-  are separately compared with the supplied ZIP.
-- Read runtime/dependency versions from the executable's embedded manifests.
-- Both supplied EXEs have no PE Authenticode certificate table.
-- No Windows execution, clean installation, live remote test or malware
-  attestation was performed here. Installer internals have not been independently
-  extracted and compared with the portable EXE.
-
-Windows 11, clean machines, all physical keys and all third-party speech apps
-remain unverified. Back-key delivery is known to be inconsistent; volume and
-power are system passthrough. This is a **development prerelease**, not a stable
-or signed Windows distribution. Mac 0.2.10 is unchanged and remains separately
-available.
-
-## Publication fixes / 发布修正
-
-Build **18w**, application and setup file version **0.3.0.18**, replaces the
-supplied build 17w for public distribution:
-
-- Removed a hardcoded development remote address from the HID matcher.
-- Corrected VID/PID parsing for Windows Bluetooth paths (`DEV_VID&012717_PID&32B8`),
-  including tests using synthetic device addresses.
-- Disabled embedded PDB data in the published application; no personal build
-  path or original device address is intentionally included in public artifacts.
-- Added portable build wrappers, corrected platform guides, and bundled full
-  third-party license materials in both the setup and portable distribution.
-
-The original binaries are preserved locally and are not release assets. The
-release binaries are built from the published commit on a GitHub-hosted Windows
-runner. See the linked workflow result on the release page for the actual test
-and build outcome. CI does not test Bluetooth hardware or third-party input apps.
-The original Windows 10 developer testing applies to build 17w, not a physical
-acceptance of the rebuilt 18w candidate. Mac runtime source is unchanged.
+Both the application and this project's installer are unsigned. Vendor files
+retain their original form. This is a development prerelease, not a stable or
+production-signed distribution. The back key can be inconsistent; power/volume
+remain system-controlled. Keyboard/remote ownership switching can affect the
+first key. Audio self-check reports loopback signal, not guaranteed speech-app
+input; missing configured output may fall back to the system output with a warning.

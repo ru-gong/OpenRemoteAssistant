@@ -1,12 +1,12 @@
 # 小米蓝牙遥控器助手 · Windows / OpenRemoteAssistant
 
-**0.3.0（build 18w）开发测试预发布 · Windows x64 · RC003-MS / 小米蓝牙遥控器 2 Pro**
+**0.3.1（build 21w）开发测试预发布 · Windows x64 · RC003-MS / 小米蓝牙遥控器 2 Pro**
 
-遥控器按键映射与麦克风接入，用于语音输入、语音编程和 web coding；本程序不做语音转文字。[下载 Windows 版](https://github.com/ru-gong/OpenRemoteAssistant/releases/tag/v0.3.0-win)。
+遥控器按键映射与麦克风接入，用于语音输入、语音编程和 web coding；本程序不做语音转文字。[下载 Windows 版](https://github.com/ru-gong/OpenRemoteAssistant/releases/tag/v0.3.1-win)。
 
 ## 安装与连接
 
-1. 下载安装版 `OpenRemoteAssistant-0.3.0-setup-bundle.zip`，解压后运行里面的 `setup.exe`；或下载便携版 ZIP，完整解压后运行 `OpenRemoteAssistantWin.exe`。附带的许可文件请一起保留。
+1. 下载安装版 `OpenRemoteAssistant-0.3.1-setup-bundle.zip`，解压后运行里面的 `setup.exe`；或下载便携版 ZIP，完整解压后运行 `OpenRemoteAssistantWin.exe`。附带的许可文件请一起保留。
 2. 安装版不要求管理员权限，默认安装到 `%LOCALAPPDATA%\OpenRemoteAssistant`。若界面无法打开，安装微软官方 [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)。无需另装 .NET。
 3. 在 Windows 蓝牙设置中配对 RC003-MS，打开助手扫描并绑定。一次只连接一只同类遥控器。
 
@@ -14,14 +14,18 @@
 
 ## 用作输入法麦克风
 
-**Windows 安装包不含虚拟麦克风驱动，安装助手本身不会新增“遥控器麦克风”。**
+**已附带 VB-CABLE 原厂安装包，需单独点击安装并授权；安装助手不会自动安装驱动。输入法里的设备名称是 `CABLE Output`，不是“遥控器麦克风”。**
 
-1. 如尚无虚拟音频线，从 [VB-Audio 官方网站](https://vb-audio.com/Cable/)自行安装 VB-CABLE（独立许可；驱动安装可能需要管理员权限和重启，按厂商说明操作）。已有等效设备也可使用。
+1. 如尚无虚拟音频线，在助手点击“安装虚拟声卡”，确认后按 Windows 提示授权。VB-CABLE 由 [VB-Audio](https://vb-audio.com/Cable/) 提供，采用独立的 donationware 许可，欢迎支持作者；也可从官网自行安装。驱动可能需要重启，助手不会自动重启电脑。
 2. 在助手连接语音服务，打开“实时播放”，输出设备选 **`CABLE Input`**，不要选扬声器。
 3. 在 Typeless、豆包输入法、微信输入法或其他语音软件里，将麦克风选为 **`CABLE Output`**，允许该软件访问麦克风。
 4. 按住遥控器语音键说话，松开停止。需要保持助手运行；**Windows 版关闭窗口即退出**。
 
 “Input / Output”是虚拟音频线两端的名称：助手把声音送入 Input，输入法从 Output 录音。只有看到音频电平并不代表输入法已选对设备。
+
+## 没有声音时
+
+点击“音频链路自检”：它会列出端点状态，发送约 1.2 秒测试音并检测回环信号；请先结束会议、播放和录音。若选定输出不存在，当前实现可能回退到系统默认设备，界面和报告会提示，测试音也可能从扬声器播放。自检只检查电脑音频链路，不能代替遥控器麦克风和目标输入法的实测。报告保存在配置目录下的“音频自检报告.txt”，分享前请检查其中的设备信息。
 
 ## 快捷键和按键映射
 
@@ -45,15 +49,17 @@
 
 ## English
 
-**Windows x64 preview 0.3.0 (build 18w), for Xiaomi Bluetooth Remote 2 Pro / RC003-MS.** Map buttons and route the remote microphone to your speech input app for dictation or web coding. No speech recognition is included.
+**Windows x64 preview 0.3.1 (build 21w), for Xiaomi Bluetooth Remote 2 Pro / RC003-MS.** Map buttons and route the remote microphone to your speech input app for dictation or web coding. No speech recognition is included.
 
 1. Download the setup-bundle ZIP, extract it and run `setup.exe`, or extract the portable ZIP and run `OpenRemoteAssistantWin.exe`. Keep the included license files. The setup is per-user; .NET is bundled. Install Microsoft's [WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) if required.
 2. Pair the remote in Windows Bluetooth settings, then scan and bind in the assistant.
-3. Install a virtual audio cable separately if needed; **no virtual microphone driver is bundled**. In the assistant enable live playback to **CABLE Input**. In your speech app select **CABLE Output** as the microphone.
+3. If needed, click the virtual-cable install button to install the bundled, unmodified VB-CABLE package after confirmation and Windows authorization. It is separate donationware from [VB-Audio](https://vb-audio.com/Cable/); users can identify the supplier and donate/pay there. Driver installation may require a reboot, which this app never triggers automatically. In the assistant enable live playback to **CABLE Input**. In your speech app select **CABLE Output** as the microphone.
 4. Hold the remote voice button to speak. Keep the assistant running; closing its window exits.
 5. Match the speech app's shortcut (default F2; left/right modifiers are available) and mode: tap on each press, tap on press and release, or hold until release. These modes control keyboard events; remote audio still requires holding the voice button.
 
-Back-key behavior is unreliable in some apps. Power and volume remain system-controlled. Windows 10 build 19045 has developer-reported tests; Windows 11 and clean-machine compatibility have not been verified here. Both EXEs are unsigned; verify release hashes and do not disable security protections.
+The audio self-check sends a short test tone and measures loopback input. Stop meetings/recording first. A missing configured endpoint may fall back to the default output, with a warning; you may hear the tone from speakers. The report is not a physical remote or speech-app acceptance test.
+
+Back-key behavior is unreliable in some apps. Power and volume remain system-controlled. Windows 10 build 19045 has developer-reported tests; Windows 11 and clean-machine compatibility have not been verified here. The application and its installer are unsigned; verify release hashes and do not disable security protections.
 
 Settings, logs and cache live in `%LOCALAPPDATA%\OpenRemoteAssistant`. WAV recording is off by default, can be enabled locally, and defaults to `Music\RemoteAssistant`; CLI `--voice-listen` records WAV. Uninstall leaves personal data in place. Uninstall any third-party cable separately.
 

@@ -63,3 +63,10 @@ Windows publication fixes: remove device-specific HID address fallback, parse
 Windows Bluetooth vendor-source prefixes, sanitize test fixtures, disable
 embedded debug metadata, and include component licenses in the installer.
 Windows build 18w is rebuilt from the published source.
+
+Windows 0.3.1 publication modifications: 2026-09-21 (build 21w)
+Changes: merge audio path diagnostics and optional VB-CABLE installation;
+retain the published generic HID identity and private-path removal fixes;
+add visible vendor attribution, official website access and explicit driver
+installation/test-tone confirmation; update release packaging and verification.
+VB-CABLE Driver Pack45 remains unmodified and separately licensed by VB-Audio.

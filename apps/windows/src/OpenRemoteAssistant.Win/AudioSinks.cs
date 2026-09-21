@@ -59,12 +59,20 @@ public sealed class WasapiOutSink : IVoiceAudioSink
     public long EnqueuedFrames;
     public long EnqueuedBytes;
     public string EndpointName = "";
+    /// <summary>True when a device was configured but no live endpoint matched,
+    /// so playback fell back to the system default. Never let this pass
+    /// silently: the user selected a virtual cable, got a real speaker, heard
+    /// "no sound in the cable" and had no way to see why.</summary>
+    public bool FellBackToDefault;
+    /// <summary>Last failure message, for the self-check report and the log.</summary>
+    public string LastError = "";
     public event Action? DrainCompleted;
 
     public WasapiOutSink(string? deviceIdFragment = null) =>
         _deviceIdFragment = string.IsNullOrWhiteSpace(deviceIdFragment) ? null : deviceIdFragment;
 
-    public string Name => "wasapi";
+    /// <summary>Shows the resolved endpoint (or the fallback) in status lines.</summary>
+    public string Name => string.IsNullOrEmpty(EndpointName) ? "wasapi" : $"wasapi[{EndpointName}]";
 
     /// <summary>List WASAPI render endpoints (friendly names), for the UI.</summary>
     public static List<(string Id, string Name)> EnumerateEndpoints()
@@ -86,6 +94,10 @@ public sealed class WasapiOutSink : IVoiceAudioSink
                 if (d.FriendlyName.Contains(frag, StringComparison.OrdinalIgnoreCase))
                     return d;
             }
+            // Configured device is not live. Falling back keeps audio working —
+            // but the caller must be able to say so loudly, because the sound is
+            // now going somewhere the user did not ask for.
+            FellBackToDefault = true;
         }
         return _enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
     }
@@ -95,8 +107,10 @@ public sealed class WasapiOutSink : IVoiceAudioSink
         try
         {
             DisposeOutput();
+            FellBackToDefault = false;
+            LastError = "";
             var device = ResolveDevice();
-            if (device is null) return false;
+            if (device is null) { LastError = "找不到任何可用的播放端点。"; return false; }
             EndpointName = device.FriendlyName;
             _output = new WasapiOut(device, AudioClientShareMode.Shared, useEventSync: true, latency: 120);
             _buffer = new BufferedWaveProvider(Format)
@@ -111,8 +125,9 @@ public sealed class WasapiOutSink : IVoiceAudioSink
             _output.Init(_buffer);
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            LastError = ex.Message;
             DisposeOutput();
             return false;
         }
@@ -133,7 +148,7 @@ public sealed class WasapiOutSink : IVoiceAudioSink
         if (!_playing && buffer.BufferedDuration >= TimeSpan.FromMilliseconds(120))
         {
             try { output.Play(); _playing = true; }
-            catch { return false; }
+            catch (Exception ex) { LastError = ex.Message; return false; }
         }
         return true;
     }

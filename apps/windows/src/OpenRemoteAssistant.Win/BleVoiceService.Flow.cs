@@ -215,7 +215,9 @@ public sealed partial class RemoteVoiceService
                             OnDiagnostics?.Invoke($"waveOut 统计：open={wo.OpenResult} dev={wo.MatchedDeviceIndex}({wo.MatchedDeviceName}) enqueuedFrames={wo.EnqueuedFrames} writtenBuffers={wo.WrittenBuffers}");
                             break;
                         case WasapiOutSink ws:
-                            OnDiagnostics?.Invoke($"wasapi 统计：endpoint={ws.EndpointName} enqueuedFrames={ws.EnqueuedFrames} bytes={ws.EnqueuedBytes}");
+                            OnDiagnostics?.Invoke($"wasapi 统计：endpoint={ws.EndpointName} enqueuedFrames={ws.EnqueuedFrames} bytes={ws.EnqueuedBytes}"
+                                + (ws.FellBackToDefault ? " [警告] 指定设备未匹配，已回退到系统默认设备" : "")
+                                + (ws.LastError.Length > 0 ? $" 最后错误={ws.LastError}" : ""));
                             break;
                     }
                     lock (_gate)
